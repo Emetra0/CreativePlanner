@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "language": "en",
+    "label": "English",
+    "version": 1
+  },
+  "terms": {
+    "planner": {
+      "term": "Planner",
+      "partOfSpeech": "noun",
+      "notes": "Primary planning product area."
+    },
+    "mindmap": {
+      "term": "Mindmap",
+      "partOfSpeech": "noun",
+      "notes": "Feature label in navigation and page titles."
+    },
+    "storytelling": {
+      "term": "Storytelling",
+      "partOfSpeech": "noun",
+      "notes": "Creative writing section label."
+    },
+    "read_only": {
+      "term": "Read only",
+      "partOfSpeech": "adjective",
+      "notes": "Permission state, not an action."
+    },
+    "share_project": {
+      "term": "Share project",
+      "partOfSpeech": "verb phrase",
+      "notes": "Collaboration action label."
+    }
+  }
+}

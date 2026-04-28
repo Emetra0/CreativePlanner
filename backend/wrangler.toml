@@ -1,0 +1,27 @@
+name = "creative-planner-sync"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+
+[durable_objects]
+bindings = [
+	{ name = "COLLAB_ROOM", class_name = "CollaborationRoom" }
+]
+
+[[migrations]]
+tag = "v1-collaboration-room"
+new_sqlite_classes = ["CollaborationRoom"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "creative-planner-db"
+database_id = "fbeb1329-988b-46d1-beed-a09c26272c28"
+
+[vars]
+# Point this at a real Collabora launcher URL, typically:
+# https://collabora.example.com/browser/dist/cool.html
+COLLABORA_URL = ""
+WOPI_TOKEN_TTL_MS = "3600000"
+
+# Configure Google OAuth with Wrangler secrets or backend/.dev.vars during local development.
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET

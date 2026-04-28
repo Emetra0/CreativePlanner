@@ -1,0 +1,114 @@
+{
+  "nodes": [
+    {
+      "id": "group-h28xhvllm",
+      "type": "groupNode",
+      "position": {
+        "x": -72.54071758679413,
+        "y": 74.70872079849809
+      },
+      "style": {
+        "width": 317.9893688923097,
+        "height": 303.7648356877238
+      },
+      "data": {
+        "label": "the main character names",
+        "color": "#e6cfcf"
+      },
+      "width": 318,
+      "height": 304,
+      "selected": true,
+      "positionAbsolute": {
+        "x": -72.54071758679413,
+        "y": 74.70872079849809
+      },
+      "dragging": false
+    },
+    {
+      "id": "bako3dhmw",
+      "type": "mindMap",
+      "position": {
+        "x": 193.65927903164004,
+        "y": 37.467015142353205
+      },
+      "parentNode": "group-h28xhvllm",
+      "zIndex": 10,
+      "data": {
+        "label": "joel",
+        "category": "characters"
+      },
+      "style": {
+        "backgroundColor": "transparent",
+        "border": "none",
+        "width": "auto"
+      },
+      "width": 100,
+      "height": 40,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 110.20592707237404,
+        "y": 159.27236849572972
+      },
+      "dragging": false
+    },
+    {
+      "id": "7srjgpp9i",
+      "type": "mindMap",
+      "position": {
+        "x": 40.000000000000014,
+        "y": 40
+      },
+      "parentNode": "group-h28xhvllm",
+      "zIndex": 10,
+      "data": {
+        "label": "jordy",
+        "category": "characters"
+      },
+      "style": {
+        "backgroundColor": "transparent",
+        "border": "none",
+        "width": "auto"
+      },
+      "width": 100,
+      "height": 40,
+      "selected": false
+    }
+  ],
+  "edges": [
+    {
+      "stroke": "#b1b1b7",
+      "strokeWidth": 2,
+      "type": "mindMap",
+      "source": "bako3dhmw",
+      "sourceHandle": "left",
+      "target": "7srjgpp9i",
+      "targetHandle": "right",
+      "data": {
+        "pathType": "smoothstep"
+      },
+      "id": "reactflow__edge-bako3dhmwleft-7srjgpp9iright"
+    }
+  ],
+  "categories": [
+    {
+      "id": "default",
+      "name": "General",
+      "color": "#e5e7eb"
+    },
+    {
+      "id": "characters",
+      "name": "Characters",
+      "color": "#bfdbfe"
+    },
+    {
+      "id": "plot",
+      "name": "Plot",
+      "color": "#fde68a"
+    },
+    {
+      "id": "builds",
+      "name": "Builds",
+      "color": "#bbf7d0"
+    }
+  ]
+}

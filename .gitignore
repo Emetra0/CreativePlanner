@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+backend/.wrangler/
+backend/.dev.vars
+.env.selfhost
+src-tauri/target/
+*.log
+tsconfig.tsbuildinfo

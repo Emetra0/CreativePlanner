@@ -1,0 +1,19 @@
+{
+  "name": "creative-planner-backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "dev:local": "wrangler dev --local-protocol=http --port 8787"
+  },
+  "devDependencies": {
+    "wrangler": "^4.60.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "otpauth": "^9.4.1",
+    "uuid": "^13.0.0"
+  }
+}

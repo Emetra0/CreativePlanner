@@ -1,0 +1,6 @@
+COLLABORA_URL=http://127.0.0.1:9980/browser/dist/cool.html
+WOPI_TOKEN_TTL_MS=3600000
+# Optional: keep local signing separate from production.
+WOPI_SECRET=creative-planner-local-dev
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret

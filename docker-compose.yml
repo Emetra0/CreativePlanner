@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # Reverse Proxy
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web
+
+  # Security Engine (WAF/IPS)
+  crowdsec:
+    image: crowdsecurity/crowdsec
+    environment:
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve
+    volumes:
+      - crowdsec-db:/var/lib/crowdsec/data
+      - crowdsec-config:/etc/crowdsec
+    networks:
+      - web
+
+  # Identity Provider (Auth)
+  authentik_server:
+    image: beryju/authentik
+    command: server
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__USER=authentik
+      - AUTHENTIK_POSTGRESQL__NAME=authentik
+      - AUTHENTIK_POSTGRESQL__PASSWORD=secret_password
+      - AUTHENTIK_SECRET_KEY=generate_a_random_secret_key_here
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - web
+
+  authentik_worker:
+    image: beryju/authentik
+    command: worker
+    environment:
+      - AUTHENTIK_REDIS__HOST=redis
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__USER=authentik
+      - AUTHENTIK_POSTGRESQL__NAME=authentik
+      - AUTHENTIK_POSTGRESQL__PASSWORD=secret_password
+      - AUTHENTIK_SECRET_KEY=generate_a_random_secret_key_here
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - web
+
+  postgresql:
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_PASSWORD=secret_password
+      - POSTGRES_USER=authentik
+      - POSTGRES_DB=authentik
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks:
+      - web
+
+  redis:
+    image: redis:alpine
+    networks:
+      - web
+
+  # Your App (Web Version)
+  app:
+    build: .
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`planner.local`)"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+    networks:
+      - web
+
+  collabora:
+    image: collabora/code:24.04.13.2.1
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=localhost|127\\.0\\.0\\.1|host\\.docker\\.internal
+      - username=admin
+      - password=admin
+      - DONT_GEN_SSL_CERT=true
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+    cap_add:
+      - MKNOD
+    networks:
+      - web
+
+networks:
+  web:
+
+volumes:
+  crowdsec-db:
+  crowdsec-config:
+  database:

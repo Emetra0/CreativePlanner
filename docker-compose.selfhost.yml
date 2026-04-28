@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      COLLABORA_URL: ${COLLABORA_URL}
+      WOPI_SECRET: ${WOPI_SECRET}
+      WOPI_TOKEN_TTL_MS: ${WOPI_TOKEN_TTL_MS:-3600000}
+    volumes:
+      - backend_state:/app/.wrangler
+
+  collabora:
+    image: collabora/code:24.04.13.2.1
+    restart: unless-stopped
+    cap_add:
+      - MKNOD
+    environment:
+      domain: ${COLLABORA_DOMAIN}
+      username: ${COLLABORA_ADMIN_USER:-admin}
+      password: ${COLLABORA_ADMIN_PASSWORD}
+      DONT_GEN_SSL_CERT: 'true'
+      extra_params: --o:ssl.enable=false --o:ssl.termination=true
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_WORKER_URL: /api
+    depends_on:
+      - backend
+      - collabora
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+
+volumes:
+  backend_state:

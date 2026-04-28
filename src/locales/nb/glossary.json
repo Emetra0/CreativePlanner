@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "language": "nb",
+    "label": "Norsk Bokmål",
+    "version": 1
+  },
+  "terms": {
+    "planner": {
+      "term": "Planlegger",
+      "partOfSpeech": "noun",
+      "notes": "Primært produktområde for planlegging."
+    },
+    "mindmap": {
+      "term": "Tankekart",
+      "partOfSpeech": "noun",
+      "notes": "Funksjonsnavn i navigasjon og sideoverskrifter."
+    },
+    "storytelling": {
+      "term": "Historiefortelling",
+      "partOfSpeech": "noun",
+      "notes": "Seksjonsnavn for kreativ skriving."
+    },
+    "read_only": {
+      "term": "Skrivebeskyttet",
+      "partOfSpeech": "adjective",
+      "notes": "Tillatelsestilstand, ikke en handling."
+    },
+    "share_project": {
+      "term": "Del prosjekt",
+      "partOfSpeech": "verb phrase",
+      "notes": "Handling for samarbeid og deling."
+    }
+  }
+}

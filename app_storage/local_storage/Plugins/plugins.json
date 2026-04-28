@@ -1,0 +1,10 @@
+[
+  {
+    "id": "bible-verse",
+    "name": "Daily Verse",
+    "description": "Get a daily bible verse for inspiration.",
+    "enabled": true,
+    "installed": true,
+    "icon": "Book"
+  }
+]

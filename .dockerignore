@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+.wrangler
+backend\.wrangler
+src-tauri\target
+npm-debug.log
+backend\.dev.vars
+.env.selfhost

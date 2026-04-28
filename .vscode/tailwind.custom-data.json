@@ -1,0 +1,25 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@tailwind",
+      "description": "Injects Tailwind's base, components, or utilities styles."
+    },
+    {
+      "name": "@apply",
+      "description": "Inlines existing utility classes into a custom CSS rule."
+    },
+    {
+      "name": "@layer",
+      "description": "Places custom styles into Tailwind's base, components, or utilities layer."
+    },
+    {
+      "name": "@config",
+      "description": "Specifies a Tailwind config file for the current stylesheet."
+    },
+    {
+      "name": "@screen",
+      "description": "Wraps styles in a Tailwind breakpoint media query."
+    }
+  ]
+}
