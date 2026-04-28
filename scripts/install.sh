@@ -169,20 +169,23 @@ cat <<EOF
 
 Creative Planner installation completed.
 
-Server address:
+Detected server host:
   ${PUBLIC_HOST}
 
 App port:
   ${APP_PORT}
 
-App URL:
+Login URL:
   http://${PUBLIC_HOST}:${APP_PORT}
 
+First admin setup URL:
+  http://${PUBLIC_HOST}:${APP_PORT}/bootstrap-admin
+
 Login flow:
-  1. Open http://${PUBLIC_HOST}:${APP_PORT}
-  2. If this is the first setup, open http://${PUBLIC_HOST}:${APP_PORT}/bootstrap-admin
+  1. Open the Login URL above.
+  2. If this is the first setup, open the First admin setup URL above.
   3. Create the first admin account
-  4. Return to http://${PUBLIC_HOST}:${APP_PORT} and sign in with that account
+  4. Return to the Login URL and sign in with that account
 
 Collabora admin password:
   ${COLLABORA_PASSWORD_VALUE}
