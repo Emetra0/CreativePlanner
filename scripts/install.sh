@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+CURRENT_REPO_DIR="$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)"
 DEFAULT_REPO_URL="https://github.com/Emetra0/CreativePlanner.git"
-REPO_URL="${REPO_URL:-${DEFAULT_REPO_URL}}"
+REPO_URL="${REPO_URL:-}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/creative-planner}"
 APP_PORT="${APP_PORT:-8080}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
@@ -64,6 +66,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+LOCAL_REPO_AVAILABLE="false"
+LOCAL_REPO_REMOTE=""
+INSTALL_SOURCE_DESCRIPTION=""
+USE_LOCAL_SOURCE="false"
+
+if git -C "${CURRENT_REPO_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  LOCAL_REPO_AVAILABLE="true"
+  LOCAL_REPO_REMOTE="$(git -C "${CURRENT_REPO_DIR}" remote get-url origin 2>/dev/null || true)"
+fi
+
+if [[ -z "${REPO_URL}" ]]; then
+  if [[ "${LOCAL_REPO_AVAILABLE}" = "true" ]]; then
+    REPO_URL="${LOCAL_REPO_REMOTE:-${DEFAULT_REPO_URL}}"
+    INSTALL_SOURCE_DESCRIPTION="local checkout at ${CURRENT_REPO_DIR}"
+    USE_LOCAL_SOURCE="true"
+  else
+    REPO_URL="${DEFAULT_REPO_URL}"
+    INSTALL_SOURCE_DESCRIPTION="remote repository ${REPO_URL}"
+  fi
+else
+  INSTALL_SOURCE_DESCRIPTION="remote repository ${REPO_URL}"
+fi
+
 if [[ -z "${PUBLIC_HOST}" ]]; then
   PUBLIC_HOST="$(hostname -I | awk '{print $1}')"
 fi
@@ -99,7 +124,14 @@ if [[ -d "${INSTALL_DIR}/.git" ]]; then
   git -C "${INSTALL_DIR}" reset --hard "origin/${BRANCH}"
 else
   rm -rf "${INSTALL_DIR}"
-  git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
+  if [[ "${USE_LOCAL_SOURCE}" = "true" ]]; then
+    git clone --branch "${BRANCH}" "${CURRENT_REPO_DIR}" "${INSTALL_DIR}"
+    git -C "${INSTALL_DIR}" remote set-url origin "${REPO_URL}"
+    git -C "${INSTALL_DIR}" fetch --depth 1 origin "${BRANCH}" || true
+    git -C "${INSTALL_DIR}" checkout "${BRANCH}"
+  else
+    git clone --depth 1 --branch "${BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
+  fi
 fi
 
 WOPI_SECRET_VALUE="$(openssl rand -hex 32)"
@@ -170,7 +202,8 @@ Next steps:
   1. Use local accounts by default for this self-hosted install.
   2. If this is the first install, create the first admin through /bootstrap-admin.
   3. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
-  4. Repository source: ${REPO_URL}
+  4. Install source: ${INSTALL_SOURCE_DESCRIPTION}
+  5. Update source: ${REPO_URL}
 
 EOF
 

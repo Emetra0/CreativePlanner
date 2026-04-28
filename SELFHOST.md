@@ -2,9 +2,27 @@
 
 This repo can be installed on an Ubuntu server with one script after it is uploaded to GitHub.
 
-## One-command install
+## Preferred install
 
-Replace the repo URL with your real GitHub repository:
+Clone the repo on Ubuntu and run the installer locally:
+
+```bash
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo bash scripts/install.sh --port 8080
+```
+
+With a fixed public host:
+
+```bash
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
+```
+
+## Alternative remote install
+
+If you want to stream the installer directly from GitHub instead:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
@@ -27,10 +45,12 @@ If `--port` is omitted, the installer starts from `8080`. If that port is alread
 ## What the installer does
 
 1. Installs `docker.io` and `docker-compose`.
-2. Clones or updates the GitHub repository.
-3. Detects a free host port for the web app.
-4. Writes `.env.selfhost` with generated secrets for WOPI, Collabora, and MariaDB.
-5. Builds and starts the full stack from `docker-compose.selfhost.yml`.
+2. Installs the app into `/opt/creative-planner`.
+3. Uses the local checkout as the install source when you run it from a cloned repo.
+4. Keeps the GitHub origin as the update source.
+5. Detects a free host port for the web app.
+6. Writes `.env.selfhost` with generated secrets for WOPI, Collabora, and MariaDB.
+7. Builds and starts the full stack from `docker-compose.selfhost.yml`.
 
 ## Services included
 

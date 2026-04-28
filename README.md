@@ -72,21 +72,47 @@ For web usage on Ubuntu, use the self-hosted Docker stack. It starts the fronten
 - Local account login works without Google OAuth.
 - Create a Google OAuth Web app only if you want Google sign-in.
 
-### 2. Install with one command
+### 2. Preferred install path
 
-Replace the repo URL and public host with your own values:
+Clone the repo on the Ubuntu server and run the installer from that local checkout:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo bash scripts/install.sh --port 8080
 ```
 
 If you want to force a specific public host instead of using the server's detected IP:
 
 ```bash
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
+```
+
+If you want optional Google sign-in too:
+
+```bash
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
+```
+
+### 3. Alternative remote install
+
+If you prefer not to clone first, you can still stream the installer directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
+```
+
+With a fixed public host:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080 --public-host your.server.ip.or.domain
 ```
 
-If you want optional Google sign-in too, add the Google variables before `bash`:
+With optional Google sign-in:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.server.ip.or.domain
@@ -95,15 +121,17 @@ curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/script
 What this does:
 
 1. Installs Docker and Docker Compose.
-2. Clones the repo into `/opt/creative-planner` by default.
-3. Detects a free host port, starting from the requested port and moving upward if needed.
-4. Creates `.env.selfhost` with generated secrets.
-5. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
-6. Applies the bundled schema and all backend migrations automatically.
+2. Installs the app into `/opt/creative-planner` by default.
+3. Uses the local cloned repo as the install source when you run `scripts/install.sh` from a checkout.
+4. Keeps the GitHub repo as the update source for later `scripts/update.sh` runs.
+5. Detects a free host port, starting from the requested port and moving upward if needed.
+6. Creates `.env.selfhost` with generated secrets.
+7. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
+8. Applies the bundled schema and all backend migrations automatically.
 
 If you omit `--port`, the installer starts from `8080`. If that port is already taken, it automatically picks the next free port and prints the final URL at the end of installation.
 
-### 3. Open the app
+### 4. Open the app
 
 After the installer finishes, use the URL shown in the terminal summary. It includes:
 
@@ -127,7 +155,7 @@ http://your.server.ip.or.domain:8080/bootstrap-admin
 
 After creating that first admin, go back to the main app URL and log in with the account you just created.
 
-### 4. Manage the running app
+### 5. Manage the running app
 
 The install directory defaults to `/opt/creative-planner`.
 
@@ -159,7 +187,7 @@ cd /opt/creative-planner
 docker compose -f docker-compose.selfhost.yml --env-file .env.selfhost down
 ```
 
-### 5. Update the app later
+### 6. Update the app later
 
 Run:
 
@@ -168,7 +196,7 @@ cd /opt/creative-planner
 sh scripts/update.sh
 ```
 
-### 6. Optional Google OAuth settings
+### 7. Optional Google OAuth settings
 
 If you choose to enable Google sign-in, use:
 
@@ -223,7 +251,9 @@ If you want this repo to install as a full self-hosted service on Ubuntu from a 
 Once the repo is on GitHub, the intended install flow is a single command like:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
+git clone https://github.com/Emetra0/CreativePlanner.git
+cd CreativePlanner
+sudo bash scripts/install.sh --port 8080
 ```
 
 That installer brings up the frontend, backend, MariaDB, and Collabora stack together through `docker-compose.selfhost.yml`, and the backend applies the bundled schema and migrations automatically on first boot.
