@@ -101,7 +101,10 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y ca-certificates curl git openssl docker.io docker-compose
+apt-get install -y ca-certificates curl git openssl docker.io
+if ! apt-get install -y docker-compose-plugin; then
+  apt-get install -y docker-compose
+fi
 systemctl enable --now docker
 
 REQUESTED_APP_PORT="${APP_PORT}"
