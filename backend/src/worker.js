@@ -26,7 +26,7 @@ async function hashPassword(password, salt) {
   return btoa(String.fromCharCode(...new Uint8Array(exported)));
 }
 
-async function authenticateSessionToken(env, token) {
+export async function authenticateSessionToken(env, token) {
   if (!token) return null;
   const session = await env.DB.prepare('SELECT * FROM sessions WHERE id = ? AND expires_at > ?').bind(token, Date.now()).first();
   return session?.user_id || null;
@@ -357,7 +357,7 @@ function mergeMindmapDataForMember(existingData, incomingData, memberCapabilitie
   };
 }
 
-async function getProjectAccess(env, projectId, userId) {
+export async function getProjectAccess(env, projectId, userId) {
   const access = await getMindmapMemberCapabilities(env, projectId, userId);
   if (!access) return null;
   return { project: access.project, permission: access.permission || 'view', isOwner: !!access.isOwner, member: access };
@@ -607,7 +607,7 @@ async function resolveOfficeTokenContext(env, accessToken, fileId) {
   return { ...payload, document: snapshot.document, data: snapshot.data };
 }
 
-async function getSharedMindmapSnapshot(env, projectId, resourceId) {
+export async function getSharedMindmapSnapshot(env, projectId, resourceId) {
   const resource = await env.DB.prepare('SELECT * FROM project_resources WHERE project_id = ? AND resource_id = ?').bind(projectId, resourceId).first();
   if (!resource || resource.resource_type !== 'mindmap') return null;
 
@@ -623,7 +623,7 @@ async function getSharedMindmapSnapshot(env, projectId, resourceId) {
   return { resource, ownerData, document, data };
 }
 
-async function persistSharedMindmapSnapshot(env, projectId, resourceId, document, data) {
+export async function persistSharedMindmapSnapshot(env, projectId, resourceId, document, data) {
   const existing = await env.DB.prepare('SELECT * FROM project_resources WHERE project_id = ? AND resource_id = ?').bind(projectId, resourceId).first();
   if (!existing || existing.resource_type !== 'mindmap') return null;
 
@@ -707,7 +707,7 @@ async function persistSharedOfficeSnapshot(env, projectId, resourceId, document,
   return { document: normalizedDocument, data };
 }
 
-async function getCollaborationParticipant(env, userId) {
+export async function getCollaborationParticipant(env, userId) {
   const participant = await env.DB.prepare('SELECT id, username, email, avatar_url, banner_color, banner_image, presence FROM users WHERE id = ?').bind(userId).first();
   return participant || { id: userId, username: 'Collaborator', email: null, avatar_url: null, banner_color: null, banner_image: null, presence: 'online' };
 }

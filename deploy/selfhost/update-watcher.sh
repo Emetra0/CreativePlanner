@@ -53,7 +53,7 @@ while true; do
     write_state "updating" "${branch}" "${current_commit}" "${remote_commit}" "true" ""
     rm -f "${REQUEST_FILE}"
 
-    if sh "${WORKSPACE_DIR}/scripts/update-selfhost.sh" >> "${LOG_FILE}" 2>&1; then
+    if sh "${WORKSPACE_DIR}/scripts/update.sh" >> "${LOG_FILE}" 2>&1; then
       refresh_status
     else
       write_state "error" "${branch}" "${current_commit}" "${remote_commit}" "true" "Update failed. Check .selfhost-update.log"

@@ -17,7 +17,12 @@ fi
 
 BRANCH="${SELFHOST_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
+COMPOSE_BIN="docker compose"
+if ! docker compose version >/dev/null 2>&1; then
+  COMPOSE_BIN="docker-compose"
+fi
+
 git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git reset --hard "origin/${BRANCH}"
-docker compose -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build --remove-orphans
+${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build --remove-orphans

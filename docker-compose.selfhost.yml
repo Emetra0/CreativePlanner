@@ -1,10 +1,32 @@
 version: '3.9'
 
 services:
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-creative_planner}
+      MARIADB_USER: ${DB_USER:-creative_planner}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$${DB_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    depends_on:
+      mariadb:
+        condition: service_healthy
     restart: unless-stopped
     environment:
       COLLABORA_URL: ${COLLABORA_URL}
@@ -12,11 +34,16 @@ services:
       WOPI_TOKEN_TTL_MS: ${WOPI_TOKEN_TTL_MS:-3600000}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      SELFHOST_DATA_DIR: ${SELFHOST_DATA_DIR:-/app/.wrangler/user-storage}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-creative_planner}
+      DB_USER: ${DB_USER:-creative_planner}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      SELFHOST_DATA_DIR: ${SELFHOST_DATA_DIR:-/app/data/user-storage}
       SELFHOST_REPO_DIR: /workspace
     volumes:
-      - backend_state:/app/.wrangler
-      - backend_user_storage:/app/.wrangler/user-storage
+      - backend_user_storage:/app/data/user-storage
       - ./:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
 
@@ -47,5 +74,5 @@ services:
       - "${APP_PORT:-8080}:80"
 
 volumes:
-  backend_state:
+  mariadb_data:
   backend_user_storage:

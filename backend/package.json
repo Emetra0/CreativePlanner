@@ -2,18 +2,23 @@
   "name": "creative-planner-backend",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "dev:local": "wrangler dev --local-protocol=http --port 8787"
+    "dev:local": "wrangler dev --local-protocol=http --port 8787",
+    "start:selfhost": "node ./src/selfhost/server.js",
+    "dev:selfhost": "node --watch ./src/selfhost/server.js"
   },
   "devDependencies": {
     "wrangler": "^4.60.0"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "mysql2": "^3.15.3",
     "otpauth": "^9.4.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
   }
 }
