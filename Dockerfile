@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps --no-audit --no-fund --loglevel=error
 
 COPY index.html ./
 COPY tsconfig.json ./

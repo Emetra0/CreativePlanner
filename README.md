@@ -47,19 +47,6 @@ For local development, configure these files:
 - `.env` with `VITE_GOOGLE_CLIENT_ID=...`
 - `backend/.dev.vars` with `GOOGLE_CLIENT_ID=...` and `GOOGLE_CLIENT_SECRET=...`
 
-For the Ubuntu self-hosted install, Google sign-in is optional. If you want it, the installer writes these values into `.env.selfhost` when you provide them:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.domain.or.ip
-```
-
-If you enable Google sign-in, use the public app URL for both values below:
-
-- Authorized JavaScript origin: `http://your.domain.or.ip:8080`
-- Authorized redirect URI: `http://your.domain.or.ip:8080/auth/google/callback`
-
-If you run behind HTTPS, use the final HTTPS URL in both places instead.
-
 ## Run On Ubuntu
 
 For web usage on Ubuntu, use the self-hosted Docker stack. It starts the frontend, backend, MariaDB, and Collabora automatically.
@@ -69,8 +56,7 @@ For web usage on Ubuntu, use the self-hosted Docker stack. It starts the fronten
 - Use Ubuntu 22.04 or newer.
 - Make sure ports `80` and your app port such as `8080` are reachable.
 - Put the repo on GitHub or another Git host the server can clone.
-- Local account login works without Google OAuth.
-- Create a Google OAuth Web app only if you want Google sign-in.
+- Local account login is the intended self-host path for this version.
 
 ### 2. Preferred install path
 
@@ -90,14 +76,6 @@ cd CreativePlanner
 sudo bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
 ```
 
-If you want optional Google sign-in too:
-
-```bash
-git clone https://github.com/Emetra0/CreativePlanner.git
-cd CreativePlanner
-sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
-```
-
 ### 3. Alternative remote install
 
 If you prefer not to clone first, you can still stream the installer directly from GitHub:
@@ -110,12 +88,6 @@ With a fixed public host:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080 --public-host your.server.ip.or.domain
-```
-
-With optional Google sign-in:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.server.ip.or.domain
 ```
 
 What this does:
@@ -137,8 +109,8 @@ After the installer finishes, use the URL shown in the terminal summary. It incl
 
 - The detected server host
 - The final app port
-- The app URL
-- The bootstrap-admin URL for the first login
+- The exact Login URL
+- The exact First admin setup URL
 - The `.env.selfhost` file path
 
 If the installer kept the requested default port, the URL will be:
@@ -195,15 +167,6 @@ Run:
 cd /opt/creative-planner
 sh scripts/update.sh
 ```
-
-### 7. Optional Google OAuth settings
-
-If you choose to enable Google sign-in, use:
-
-- Authorized JavaScript origin: `http://your.server.ip.or.domain:8080`
-- Authorized redirect URI: `http://your.server.ip.or.domain:8080/auth/google/callback`
-
-If you place the app behind HTTPS, switch both entries to the final HTTPS URL.
 
 ## Cloud And Local Storage
 

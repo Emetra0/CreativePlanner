@@ -110,6 +110,8 @@ AUTO_SELECTED_PORT="false"
 if [[ "${APP_PORT}" != "${REQUESTED_APP_PORT}" ]]; then
   AUTO_SELECTED_PORT="true"
 fi
+LOGIN_URL="http://${PUBLIC_HOST}:${APP_PORT}"
+FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
 
 COMPOSE_BIN="docker compose"
 if ! docker compose version >/dev/null 2>&1; then
@@ -144,9 +146,6 @@ cat > "${INSTALL_DIR}/.env.selfhost" <<EOF
 APP_PORT=${APP_PORT}
 PUBLIC_HOST=${PUBLIC_HOST}
 PUBLIC_URL=http://${PUBLIC_HOST}:${APP_PORT}
-GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 COLLABORA_URL=http://${PUBLIC_HOST}:${APP_PORT}/browser/dist/cool.html
 COLLABORA_DOMAIN=${COLLABORA_DOMAIN_VALUE}
 COLLABORA_ADMIN_USER=admin
@@ -175,15 +174,9 @@ Detected server host:
 App port:
   ${APP_PORT}
 
-Login URL:
-  http://${PUBLIC_HOST}:${APP_PORT}
-
-First admin setup URL:
-  http://${PUBLIC_HOST}:${APP_PORT}/bootstrap-admin
-
 Login flow:
-  1. Open the Login URL above.
-  2. If this is the first setup, open the First admin setup URL above.
+  1. Open the Login URL shown at the end of this installer output.
+  2. If this is the first setup, open the First admin setup URL shown at the end.
   3. Create the first admin account
   4. Return to the Login URL and sign in with that account
 
@@ -219,23 +212,23 @@ Note:
 EOF
 fi
 
-if [[ -n "${GOOGLE_CLIENT_ID}" && -n "${GOOGLE_CLIENT_SECRET}" ]]; then
-  cat <<EOF
-Optional Google sign-in is enabled for this install.
+cat <<EOF
 
-Google OAuth settings:
-  Authorized JavaScript origin: http://${PUBLIC_HOST}:${APP_PORT}
-  Authorized redirect URI: http://${PUBLIC_HOST}:${APP_PORT}/auth/google/callback
+================ EASY LOGIN INFO ================
+Detected server host:
+  ${PUBLIC_HOST}
+
+Login URL:
+  ${LOGIN_URL}
+
+First admin setup URL:
+  ${FIRST_ADMIN_URL}
+
+If this is the first time:
+  1. Open ${FIRST_ADMIN_URL}
+  2. Create the first admin account
+  3. Go to ${LOGIN_URL}
+  4. Log in with that account
+=================================================
 
 EOF
-else
-  cat <<EOF
-Google sign-in is disabled for this install.
-To enable it later, add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and VITE_GOOGLE_CLIENT_ID to:
-  ${INSTALL_DIR}/.env.selfhost
-Then rebuild the stack:
-  cd ${INSTALL_DIR}
-  ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build
-
-EOF
-fi

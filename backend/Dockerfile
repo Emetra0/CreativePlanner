@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache git docker-cli docker-cli-compose bash
 
 COPY backend/package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund --loglevel=error
 
 COPY backend ./
 COPY deploy/selfhost/backend-entrypoint.sh /usr/local/bin/backend-entrypoint.sh
