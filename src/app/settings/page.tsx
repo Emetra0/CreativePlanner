@@ -1,10 +1,10 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Keyboard, PenTool, Lightbulb, Cloud, User, Shield, Check, X, Crown, Smartphone, QrCode, Search, RefreshCw, Mail, AlertTriangle, FileText, Trash2, RotateCcw, Camera, Palette, Upload, Link2, Type, Languages, ClipboardList, ArrowLeft } from "lucide-react";
+import { Moon, Sun, Monitor, Keyboard, PenTool, Lightbulb, Cloud, User, Shield, Check, X, Crown, Smartphone, QrCode, Search, RefreshCw, Mail, AlertTriangle, FileText, Trash2, RotateCcw, Camera, Palette, Upload, Link2, Type, Languages, ClipboardList, ArrowLeft, FolderOpen } from "lucide-react";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useChatStore } from "@/store/useChatStore";
 import { useState, useEffect, useRef, useMemo, useDeferredValue, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getWorkerUrl } from "@/lib/cloudSync";
+import { getDefaultWorkerUrl, getWorkerUrl, setWorkerUrl } from "@/lib/cloudSync";
 import { APP_LANGUAGE_OPTIONS } from '@/lib/appLanguages';
 import QRCode from 'qrcode';
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -15,6 +15,7 @@ import FontPickerPanel, { type FontPickerSection } from '@/components/FontPicker
 import { useAppTranslation } from '@/lib/appTranslations';
 import { BUILT_IN_FONT_PRESETS, DEFAULT_FONT_ID, buildCustomFontCssFamily, getFallbackFontChoice, inferFontFormat, resolveFontChoice } from '@/lib/fontSettings';
 import { KEYBIND_DEFINITIONS, KEYBIND_SECTION_META, KEYBIND_SECTION_ORDER, formatKeybindCombo, formatKeybindKey, formatKeybindModifier, getKeybindDefinition, isModifierOnlyKey, normalizeKeybindKey } from '@/lib/keybinds';
+import { selectLocalSyncDirectory } from '@/lib/fileSystem';
 
 interface LocalMachineFont {
     family: string;
@@ -62,6 +63,12 @@ export default function SettingsPage() {
     const {
         autoSave,
         setAutoSave,
+        cloudWorkerUrl,
+        setCloudWorkerUrl,
+        collaboraUrl,
+        setCollaboraUrl,
+        cloudPath,
+        setCloudPath,
         appLanguage,
         setAppLanguage,
         keybinds,
@@ -123,6 +130,9 @@ export default function SettingsPage() {
   const [loadingResetRequests, setLoadingResetRequests] = useState(false);
     const [reports, setReports] = useState<any[]>([]);
     const [loadingReports, setLoadingReports] = useState(false);
+        const [systemUpdateState, setSystemUpdateState] = useState<any | null>(null);
+        const [loadingSystemUpdate, setLoadingSystemUpdate] = useState(false);
+        const [applyingSystemUpdate, setApplyingSystemUpdate] = useState(false);
     
     // Helper to check 2FA status — reads canonical boolean from backend-synced store.
     // Handles all representations the DB or network might return (bool, 0/1, strings).
@@ -273,6 +283,32 @@ export default function SettingsPage() {
       setAppLanguage('en');
     }
   }, [appLanguage, setAppLanguage]);
+
+    const fetchSystemUpdateState = useCallback(async () => {
+        if (!user || user.role !== 'admin') return;
+        const token = useAuthStore.getState().token;
+        if (!token) return;
+
+        setLoadingSystemUpdate(true);
+        try {
+            const response = await fetch(`${getWorkerUrl()}/admin/system/update-status`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const payload = await response.json();
+            if (response.ok) {
+                setSystemUpdateState(payload.state || null);
+            }
+        } catch {
+            setSystemUpdateState(null);
+        } finally {
+            setLoadingSystemUpdate(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (!user || user.role !== 'admin') return;
+        fetchSystemUpdateState();
+    }, [user, fetchSystemUpdateState]);
 
   useEffect(() => {
     setMounted(true);
@@ -1319,6 +1355,147 @@ export default function SettingsPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
                             {text('Your data is automatically synced to your secure cloud account.')}
             </p>
+                        <div className="space-y-2">
+                            <label htmlFor="worker-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{text('Backend URL')}</label>
+                            <input
+                                id="worker-url"
+                                type="url"
+                                value={cloudWorkerUrl}
+                                onChange={(e) => {
+                                    const nextUrl = e.target.value;
+                                    setCloudWorkerUrl(nextUrl);
+                                    setWorkerUrl(nextUrl);
+                                }}
+                                placeholder={getDefaultWorkerUrl()}
+                                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white"
+                            />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {text('Leave this empty to use the hosted backend. Set it to http://127.0.0.1:8787 only when you are intentionally running a local worker.')}
+                            </p>
+                            <div className="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                <span>{text('Current backend')}: <span className="break-all">{getWorkerUrl()}</span></span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCloudWorkerUrl('');
+                                        setWorkerUrl('');
+                                    }}
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {text('Use hosted default')}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label htmlFor="collabora-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{text('Collabora host URL')}</label>
+                            <input
+                                id="collabora-url"
+                                type="url"
+                                value={collaboraUrl}
+                                onChange={(e) => setCollaboraUrl(e.target.value)}
+                                placeholder="https://office.example.com/browser/dist/cool.html"
+                                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white"
+                            />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {text('Point this at an existing Collabora Online installation. When set, the app sends this host directly during office launch instead of requiring the worker to hardcode it.')}
+                            </p>
+                            <div className="flex items-center justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setCollaboraUrl('')}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {text('Use worker default')}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{text('Local Sync Folder')}</label>
+                            <div className="rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-3 text-sm text-gray-900 dark:text-white break-all min-h-[48px]">
+                                {cloudPath || text('No local sync folder selected')}
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {text('Choose a folder from this user device. The app keeps a synced local copy there in addition to the Ubuntu-hosted cloud storage.')}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const selected = await selectLocalSyncDirectory();
+                                        if (selected) setCloudPath(selected);
+                                    }}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <FolderOpen size={16} /> {text('Choose Folder')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCloudPath(null)}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {text('Clear local sync folder')}
+                                </button>
+                            </div>
+                        </div>
+                        {user?.role === 'admin' && (
+                            <div className="space-y-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{text('App Updates')}</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{text('Checks the self-hosted GitHub repo and lets the app queue its own update rebuild.')}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={fetchSystemUpdateState}
+                                        disabled={loadingSystemUpdate}
+                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-800 disabled:opacity-60"
+                                    >
+                                        <RefreshCw size={14} className={loadingSystemUpdate ? 'animate-spin' : ''} /> {text('Check')}
+                                    </button>
+                                </div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                                    <div>{text('Status')}: {systemUpdateState?.status || text('Unknown')}</div>
+                                    <div>{text('Branch')}: {systemUpdateState?.branch || text('Unknown')}</div>
+                                    <div className="break-all">{text('Current commit')}: {systemUpdateState?.currentCommit || text('Unknown')}</div>
+                                    <div className="break-all">{text('Remote commit')}: {systemUpdateState?.remoteCommit || text('Unknown')}</div>
+                                    {systemUpdateState?.lastError && <div className="text-red-600 dark:text-red-400">{systemUpdateState.lastError}</div>}
+                                </div>
+                                {!!systemUpdateState?.changes?.length && (
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{text('Update Notes')}</div>
+                                        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+                                            {systemUpdateState.changes.map((change: any) => (
+                                                <div key={change.id} className="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">
+                                                    <div className="font-medium">{change.message}</div>
+                                                    <div className="text-gray-500 dark:text-gray-400 mt-1">{change.shortId} {text('by')} {change.author}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    disabled={applyingSystemUpdate || systemUpdateState?.status === 'updating'}
+                                    onClick={async () => {
+                                        const token = useAuthStore.getState().token;
+                                        if (!token) return;
+                                        setApplyingSystemUpdate(true);
+                                        try {
+                                            await fetch(`${getWorkerUrl()}/admin/system/update-apply`, {
+                                                method: 'POST',
+                                                headers: { Authorization: `Bearer ${token}` },
+                                            });
+                                            setSystemUpdateState((prev: any) => ({ ...(prev || {}), status: 'queued' }));
+                                        } finally {
+                                            setApplyingSystemUpdate(false);
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-60"
+                                >
+                                    <RefreshCw size={16} className={applyingSystemUpdate ? 'animate-spin' : ''} /> {text('Update App From GitHub')}
+                                </button>
+                            </div>
+                        )}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

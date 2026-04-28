@@ -255,9 +255,9 @@ export default function FileTree() {
 
     useEffect(() => {
         const initPath = async () => {
+            if (projectPath) return;
             const appDir = await getAppDir();
-            if (appDir && projectPath !== appDir) {
-                console.log("Enforcing Cloud Storage Path:", appDir);
+            if (appDir) {
                 setProjectPath(appDir);
             }
         };
@@ -443,7 +443,7 @@ export default function FileTree() {
             </div>
             <div className="overflow-y-auto max-h-[calc(100vh-400px)]">
                 <FileTreeNode 
-                    path="root/Cloud Storage" 
+                    path={projectPath} 
                     name={t('nav.cloudStorage')} 
                     level={0} 
                     onSelect={handleSelect}
@@ -452,6 +452,17 @@ export default function FileTree() {
                     onContextMenu={handleContextMenu}
                     lockedFiles={lockedFiles}
                 />
+                {cloudPath && (
+                    <FileTreeNode
+                        path={cloudPath}
+                        name={text('Local Sync')}
+                        level={0}
+                        onSelect={handleSelect}
+                        title={text('Local Sync')}
+                        onContextMenu={handleContextMenu}
+                        lockedFiles={lockedFiles}
+                    />
+                )}
             </div>
 
             {/* Context Menu */}

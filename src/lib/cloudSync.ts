@@ -5,6 +5,8 @@ import { useReferenceStore } from '@/store/useReferenceStore';
 import { useCalendarStore } from '@/store/useCalendarStore';
 import { useMindmapStore } from '@/store/useMindmapStore';
 import { useOfficeDocumentStore } from '@/store/useOfficeDocumentStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { readLocalSyncData, writeLocalSyncData } from '@/lib/fileSystem';
 
 // Configuration
 const WORKER_URL_KEY = 'creative_planner_worker_url';
@@ -12,21 +14,31 @@ const USER_ID_KEY = 'creative_planner_user_id';
 
 // Production Cloudflare worker fallback.
 const DEFAULT_WORKER_URL = 'https://creative-planner-sync.emetraproduction.workers.dev';
-const DEV_WORKER_URL = 'http://127.0.0.1:8787';
+
+export const getDefaultWorkerUrl = () => import.meta.env.VITE_WORKER_URL?.trim() || DEFAULT_WORKER_URL;
 
 export const getWorkerUrl = () => {
+    const configuredStoreUrl = useSettingsStore.getState().cloudWorkerUrl?.trim();
+    if (configuredStoreUrl) return configuredStoreUrl;
+
     if (typeof window !== 'undefined') {
-        const storedUrl = localStorage.getItem(WORKER_URL_KEY)?.trim();
-        if (storedUrl) return storedUrl;
+        const legacyStoredUrl = localStorage.getItem(WORKER_URL_KEY)?.trim();
+        if (legacyStoredUrl) {
+            useSettingsStore.getState().setCloudWorkerUrl(legacyStoredUrl);
+            localStorage.removeItem(WORKER_URL_KEY);
+            return legacyStoredUrl;
+        }
     }
-    const configuredUrl = import.meta.env.VITE_WORKER_URL?.trim();
-    if (configuredUrl) return configuredUrl;
-    return import.meta.env.DEV ? DEV_WORKER_URL : DEFAULT_WORKER_URL;
+
+    return getDefaultWorkerUrl();
 };
 
 export const setWorkerUrl = (url: string) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(WORKER_URL_KEY, url);
+    useSettingsStore.getState().setCloudWorkerUrl(url);
+
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem(WORKER_URL_KEY);
+    }
 };
 
 export const getUserId = () => {
@@ -115,11 +127,44 @@ export const saveToCloud = async (token: string, data: any) => {
     }
 };
 
-export const loadFromCloud = async (token: string) => {
-    const url = getWorkerUrl();
-    if (!url) return null;
+export const saveToLocalSync = async (data: any) => {
+    const syncPath = useSettingsStore.getState().cloudPath;
+    if (!syncPath) return false;
 
     try {
+        return await writeLocalSyncData(syncPath, JSON.stringify({ data, updatedAt: Date.now() }, null, 2));
+    } catch (error) {
+        console.error('Local sync save failed:', error);
+        return false;
+    }
+};
+
+const loadLocalSyncSnapshot = async () => {
+    const syncPath = useSettingsStore.getState().cloudPath;
+    if (!syncPath) return null;
+
+    try {
+        const raw = await readLocalSyncData(syncPath);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed?.data ? parsed : null;
+    } catch (error) {
+        console.error('Local sync load failed:', error);
+        return null;
+    }
+};
+
+export const loadFromLocalSync = async () => {
+    const snapshot = await loadLocalSyncSnapshot();
+    return snapshot?.data ?? null;
+};
+
+export const loadFromCloud = async (token: string) => {
+    const url = getWorkerUrl();
+    if (!url) return loadFromLocalSync();
+
+    try {
+        const localSnapshot = await loadLocalSyncSnapshot();
         const response = await fetch(`${url}/load`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -127,11 +172,16 @@ export const loadFromCloud = async (token: string) => {
         });
         if (response.ok) {
             const json = await response.json();
-            return json.data;
+            const cloudUpdatedAt = Number(json.lastUpdated || 0);
+            const localUpdatedAt = Number(localSnapshot?.updatedAt || 0);
+            if (localSnapshot?.data && localUpdatedAt > cloudUpdatedAt) {
+                return localSnapshot.data;
+            }
+            return json.data ?? localSnapshot?.data ?? null;
         }
-        return null;
+        return localSnapshot?.data ?? null;
     } catch (error) {
         console.error('Cloud load failed:', error);
-        return null;
+        return await loadFromLocalSync();
     }
 };

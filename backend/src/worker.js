@@ -434,6 +434,159 @@ function buildCollaboraLaunchUrl(collaboraUrl, { wopiSrc, accessToken, accessTok
   return launchUrl.toString();
 }
 
+function resolveCollaboraUrl(env, overrideUrl) {
+  const normalizedOverride = typeof overrideUrl === 'string' ? overrideUrl.trim() : '';
+  if (normalizedOverride) return normalizedOverride;
+  return (env.COLLABORA_URL || '').trim();
+}
+
+function sanitizeStorageSegment(value) {
+  return String(value || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+async function getSelfhostStorageTools(env) {
+  const storageRoot = (env.SELFHOST_DATA_DIR || '').trim() || '/app/.wrangler/user-storage';
+
+  try {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    return { storageRoot, fs, path };
+  } catch {
+    return null;
+  }
+}
+
+async function getSelfhostUpdateTools(env) {
+  const repoDir = (env.SELFHOST_REPO_DIR || '').trim() || '/workspace';
+
+  try {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    return {
+      fs,
+      path,
+      repoDir,
+      stateFile: path.join(repoDir, '.selfhost-update-state.json'),
+      requestFile: path.join(repoDir, '.selfhost-update-request.json'),
+      logFile: path.join(repoDir, '.selfhost-update.log'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseGithubRepoFromRemote(remoteUrl) {
+  if (!remoteUrl) return null;
+
+  const normalized = String(remoteUrl).trim();
+  const httpsMatch = normalized.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?$/i);
+  if (httpsMatch) {
+    return { owner: httpsMatch[1], repo: httpsMatch[2] };
+  }
+
+  return null;
+}
+
+async function getSelfhostRepoRemote(env) {
+  const tools = await getSelfhostUpdateTools(env);
+  if (!tools) return null;
+
+  try {
+    const gitConfigPath = tools.path.join(tools.repoDir, '.git', 'config');
+    const raw = await tools.fs.readFile(gitConfigPath, 'utf8');
+    const remoteMatch = raw.match(/\[remote\s+"origin"\][^\[]*?url\s*=\s*(.+)/i);
+    return remoteMatch?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function getSelfhostUpdateNotes(env, currentCommit, remoteCommit) {
+  if (!currentCommit || !remoteCommit || currentCommit === remoteCommit) return [];
+
+  const remoteUrl = await getSelfhostRepoRemote(env);
+  const repoMeta = parseGithubRepoFromRemote(remoteUrl);
+  if (!repoMeta) return [];
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repoMeta.owner}/${repoMeta.repo}/compare/${currentCommit}...${remoteCommit}`, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'CreativePlanner-Selfhost-Updater',
+      },
+    });
+
+    if (!response.ok) return [];
+
+    const payload = await response.json();
+    return Array.isArray(payload?.commits)
+      ? payload.commits.slice(0, 10).map((commit) => ({
+          id: commit.sha,
+          shortId: commit.sha?.slice(0, 7) || '',
+          message: commit.commit?.message?.split('\n')[0] || 'Update',
+          author: commit.commit?.author?.name || 'Unknown',
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+async function readSelfhostUpdateState(env) {
+  const tools = await getSelfhostUpdateTools(env);
+  if (!tools) return null;
+
+  try {
+    const raw = await tools.fs.readFile(tools.stateFile, 'utf8');
+    const state = JSON.parse(raw);
+    const changes = await getSelfhostUpdateNotes(env, state?.currentCommit, state?.remoteCommit);
+    return { ...state, changes };
+  } catch {
+    return {
+      status: 'unavailable',
+      branch: '',
+      currentCommit: '',
+      remoteCommit: '',
+      updateAvailable: false,
+      changes: [],
+      lastError: 'Self-host updater is not initialized yet.',
+      lastChecked: Date.now(),
+    };
+  }
+}
+
+async function queueSelfhostUpdate(env, requestedBy) {
+  const tools = await getSelfhostUpdateTools(env);
+  if (!tools) return false;
+
+  await tools.fs.writeFile(tools.requestFile, JSON.stringify({ requestedAt: Date.now(), requestedBy }, null, 2), 'utf8');
+  return true;
+}
+
+async function writeSelfhostUserSnapshot(env, userId, data) {
+  const tools = await getSelfhostStorageTools(env);
+  if (!tools) return false;
+
+  const userDir = tools.path.join(tools.storageRoot, sanitizeStorageSegment(userId));
+  const filePath = tools.path.join(userDir, 'app-data.json');
+  await tools.fs.mkdir(userDir, { recursive: true });
+  await tools.fs.writeFile(filePath, JSON.stringify({ data, updatedAt: Date.now() }, null, 2), 'utf8');
+  return true;
+}
+
+async function readSelfhostUserSnapshot(env, userId) {
+  const tools = await getSelfhostStorageTools(env);
+  if (!tools) return null;
+
+  try {
+    const filePath = tools.path.join(tools.storageRoot, sanitizeStorageSegment(userId), 'app-data.json');
+    const raw = await tools.fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function resolveOfficeTokenContext(env, accessToken, fileId) {
   const payload = await verifyOfficeToken(env, accessToken);
   if (!payload || payload.fileId !== fileId) return null;
@@ -1435,6 +1588,19 @@ export default {
               return new Response(JSON.stringify({ users: results }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
 
+            if (url.pathname === '/admin/system/update-status' && request.method === 'GET') {
+              const state = await readSelfhostUpdateState(env);
+              return new Response(JSON.stringify({ state }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            if (url.pathname === '/admin/system/update-apply' && request.method === 'POST') {
+              const queued = await queueSelfhostUpdate(env, userId);
+              if (!queued) {
+                return new Response(JSON.stringify({ error: 'Self-host updater is unavailable' }), { status: 503, headers: corsHeaders });
+              }
+              return new Response(JSON.stringify({ success: true, queued: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
           // Approve User
           if (url.pathname === '/admin/approve' && request.method === 'POST') {
               const { userId: targetId } = await request.json();
@@ -1720,6 +1886,12 @@ export default {
       // Save Data
       if (url.pathname === '/save' && request.method === 'POST') {
         const { data } = await request.json();
+
+        try {
+          await writeSelfhostUserSnapshot(env, userId, data);
+        } catch (error) {
+          console.error('Self-host storage write failed:', error);
+        }
         
         await env.DB.prepare(`
           INSERT INTO data (user_id, content, updated_at)
@@ -1740,6 +1912,14 @@ export default {
 
       // Load Data
       if (url.pathname === '/load' && request.method === 'GET') {
+        const selfhostSnapshot = await readSelfhostUserSnapshot(env, userId);
+
+        if (selfhostSnapshot?.data) {
+          return new Response(JSON.stringify({ data: selfhostSnapshot.data, lastUpdated: selfhostSnapshot.updatedAt, source: 'filesystem' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
         const result = await env.DB.prepare('SELECT content, updated_at FROM data WHERE user_id = ?').bind(userId).first();
 
         if (!result) {
@@ -2030,7 +2210,7 @@ export default {
       }
 
       if (url.pathname === '/office/launch' && request.method === 'POST') {
-        const { document, data, project_id, resource_id } = await request.json();
+        const { document, data, project_id, resource_id, collabora } = await request.json();
         if (!document?.id || !document?.kind || !document?.title) {
           return new Response(JSON.stringify({ error: 'Missing document payload' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
@@ -2057,9 +2237,9 @@ export default {
           }
         }
 
-        const collaboraUrl = env.COLLABORA_URL || '';
+        const collaboraUrl = resolveCollaboraUrl(env, collabora?.serverUrl);
         if (!collaboraUrl) {
-          return new Response(JSON.stringify({ configured: false, error: 'COLLABORA_URL is not configured' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ configured: false, error: 'Collabora host is not configured' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const me = await env.DB.prepare('SELECT username, email FROM users WHERE id = ?').bind(userId).first();

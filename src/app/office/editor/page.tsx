@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useProjectStore } from '@/store/useProjectStore';
 import { getWorkerUrl } from '@/lib/cloudSync';
 import OfficeShareModal from '@/components/office/OfficeShareModal';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 const KIND_ICON = {
   document: FileText,
@@ -19,6 +20,7 @@ export default function OfficeEditorPage() {
   const [searchParams] = useSearchParams();
   const { text, language } = useAppTranslation();
   const { token } = useAuthStore();
+  const { collaboraUrl } = useSettingsStore();
   const { projectResources, projects, fetchProjects, fetchProjectResources } = useProjectStore();
   const { documents, loadDocuments, getRouteForKind, syncSharedDocument, getDocumentSnapshot } = useOfficeDocumentStore();
   const documentId = searchParams.get('id') || '';
@@ -69,6 +71,9 @@ export default function OfficeEditorPage() {
             data: snapshot?.data,
             project_id: linkedProject?.id,
             resource_id: linkedProject ? currentDocument.id : undefined,
+            collabora: {
+              serverUrl: collaboraUrl || undefined,
+            },
           }),
         });
         const payload = await response.json();
@@ -86,7 +91,7 @@ export default function OfficeEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentDocument, getDocumentSnapshot, linkedProject, syncSharedDocument, token]);
+  }, [collaboraUrl, currentDocument, getDocumentSnapshot, linkedProject, syncSharedDocument, token]);
 
   if (!currentDocument) {
     return (
@@ -152,12 +157,21 @@ export default function OfficeEditorPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {launchState?.error
                   ? text(launchState.error)
-                  : text('Set COLLABORA_URL on the worker to a real Collabora cool.html endpoint. The app now sends the current office snapshot to the worker, which exposes signed file info and file content endpoints for the embedded Collabora session.')}
+                  : text('Add your Collabora cool.html endpoint in Settings. The app sends that host directly during office launch, and the worker keeps serving the signed WOPI file metadata and content endpoints for the embedded session.')}
               </p>
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <button
+                  onClick={() => navigate('/settings?section=section-cloud')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                >
+                  <ExternalLink size={16} /> {text('Open Settings')}
+                </button>
+              </div>
               <div className="rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 text-left text-sm text-gray-600 dark:text-gray-300">
                 <div><strong>{text('Expected file')}:</strong> <span className="break-all">{currentDocument.filePath}</span></div>
                 <div className="mt-2"><strong>{text('Kind')}:</strong> {currentDocument.kind}</div>
-                <div className="mt-2"><strong>{text('Configured through')}:</strong> COLLABORA_URL -&gt; /office/launch -&gt; /office/wopi/files/:id</div>
+                <div className="mt-2"><strong>{text('Configured through')}:</strong> {text('App settings')} -&gt; /office/launch -&gt; /office/wopi/files/:id</div>
+                <div className="mt-2"><strong>{text('Selected host')}:</strong> <span className="break-all">{collaboraUrl || text('Worker default')}</span></div>
               </div>
             </div>
           </div>

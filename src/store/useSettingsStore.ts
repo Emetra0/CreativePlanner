@@ -19,6 +19,10 @@ interface SettingsState {
   setProjectPath: (path: string) => void;
   cloudPath: string | null;
   setCloudPath: (path: string | null) => void;
+  cloudWorkerUrl: string;
+  setCloudWorkerUrl: (url: string) => void;
+  collaboraUrl: string;
+  setCollaboraUrl: (url: string) => void;
   autoSave: boolean;
   setAutoSave: (enabled: boolean) => void;
   appLanguage: AppLanguageCode;
@@ -51,6 +55,10 @@ export const useSettingsStore = create<SettingsState>()(
       setProjectPath: (path) => set({ projectPath: path }),
       cloudPath: null,
       setCloudPath: (path) => set({ cloudPath: path }),
+      cloudWorkerUrl: '',
+      setCloudWorkerUrl: (url) => set({ cloudWorkerUrl: url.trim() }),
+      collaboraUrl: '',
+      setCollaboraUrl: (url) => set({ collaboraUrl: url.trim() }),
       autoSave: true,
       setAutoSave: (enabled) => set({ autoSave: enabled }),
       appLanguage: 'system',
@@ -107,6 +115,8 @@ export const useSettingsStore = create<SettingsState>()(
         return {
           ...currentState,
           ...persisted,
+          cloudWorkerUrl: persisted.cloudWorkerUrl?.trim() ?? currentState.cloudWorkerUrl,
+          collaboraUrl: persisted.collaboraUrl?.trim() ?? currentState.collaboraUrl,
           appLanguage: persisted.appLanguage ?? currentState.appLanguage,
           wordExportDefaults: persistedWordExportDefaults,
           keybinds: {

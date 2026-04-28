@@ -10,6 +10,8 @@ export const isTauri = () => typeof window !== 'undefined' && (
 
 // --- Browser Native File System (Web Mode) ---
 let rootDirectoryHandle: FileSystemDirectoryHandle | null = null;
+let syncDirectoryHandle: FileSystemDirectoryHandle | null = null;
+const LOCAL_SYNC_FILE_NAME = 'creative-planner-sync.json';
 
 // Helper to get handle from path
 const getHandleFromPath = async (path: string): Promise<FileSystemHandle | null> => {
@@ -90,6 +92,81 @@ export const setRootDirectory = async (): Promise<string | null> => {
             console.error("Failed to open directory:", e);
             return null;
         }
+    }
+};
+
+export const selectLocalSyncDirectory = async (): Promise<string | null> => {
+    if (isTauri()) {
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            title: 'Select Local Sync Folder',
+        });
+        return typeof selected === 'string' ? selected : null;
+    }
+
+    try {
+        // @ts-ignore
+        syncDirectoryHandle = await window.showDirectoryPicker();
+        return syncDirectoryHandle ? syncDirectoryHandle.name : null;
+    } catch (error) {
+        console.error('Failed to open local sync directory:', error);
+        return null;
+    }
+};
+
+export const writeLocalSyncData = async (targetPath: string, content: string): Promise<boolean> => {
+    if (!targetPath) return false;
+
+    if (isTauri()) {
+        try {
+            const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs');
+            const { join } = await import('@tauri-apps/api/path');
+            await mkdir(targetPath, { recursive: true });
+            await writeTextFile(await join(targetPath, LOCAL_SYNC_FILE_NAME), content);
+            return true;
+        } catch (error) {
+            console.error('Failed to write local sync data:', error);
+            return false;
+        }
+    }
+
+    if (!syncDirectoryHandle) return false;
+
+    try {
+        const fileHandle = await syncDirectoryHandle.getFileHandle(LOCAL_SYNC_FILE_NAME, { create: true });
+        const writable = await (fileHandle as any).createWritable();
+        await writable.write(content);
+        await writable.close();
+        return true;
+    } catch (error) {
+        console.error('Failed to write browser sync data:', error);
+        return false;
+    }
+};
+
+export const readLocalSyncData = async (targetPath: string | null | undefined): Promise<string | null> => {
+    if (isTauri()) {
+        if (!targetPath) return null;
+
+        try {
+            const { readTextFile } = await import('@tauri-apps/plugin-fs');
+            const { join } = await import('@tauri-apps/api/path');
+            return await readTextFile(await join(targetPath, LOCAL_SYNC_FILE_NAME));
+        } catch {
+            return null;
+        }
+    }
+
+    if (!syncDirectoryHandle) return null;
+
+    try {
+        const fileHandle = await syncDirectoryHandle.getFileHandle(LOCAL_SYNC_FILE_NAME);
+        const file = await fileHandle.getFile();
+        return await file.text();
+    } catch {
+        return null;
     }
 };
 

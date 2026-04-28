@@ -13,4 +13,8 @@ if [ ! -f "${SCHEMA_SENTINEL}" ]; then
   touch "${SCHEMA_SENTINEL}"
 fi
 
+if [ -d "${SELFHOST_REPO_DIR:-/workspace}" ]; then
+  /usr/local/bin/update-watcher.sh &
+fi
+
 exec npx wrangler dev --local --ip 0.0.0.0 --port 8787 --local-protocol=http --persist-to "${STATE_DIR}" --show-interactive-dev-session=false

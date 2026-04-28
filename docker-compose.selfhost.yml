@@ -10,8 +10,15 @@ services:
       COLLABORA_URL: ${COLLABORA_URL}
       WOPI_SECRET: ${WOPI_SECRET}
       WOPI_TOKEN_TTL_MS: ${WOPI_TOKEN_TTL_MS:-3600000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      SELFHOST_DATA_DIR: ${SELFHOST_DATA_DIR:-/app/.wrangler/user-storage}
+      SELFHOST_REPO_DIR: /workspace
     volumes:
       - backend_state:/app/.wrangler
+      - backend_user_storage:/app/.wrangler/user-storage
+      - ./:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
 
   collabora:
     image: collabora/code:24.04.13.2.1
@@ -31,6 +38,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_WORKER_URL: /api
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}
     depends_on:
       - backend
       - collabora
@@ -40,3 +48,4 @@ services:
 
 volumes:
   backend_state:
+  backend_user_storage:

@@ -1,6 +1,7 @@
 name = "creative-planner-sync"
 main = "src/worker.js"
 compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 [durable_objects]
 bindings = [
@@ -25,3 +26,5 @@ WOPI_TOKEN_TTL_MS = "3600000"
 # Configure Google OAuth with Wrangler secrets or backend/.dev.vars during local development.
 # GOOGLE_CLIENT_ID
 # GOOGLE_CLIENT_SECRET
+# Optional self-host storage root for per-user cloud files.
+# SELFHOST_DATA_DIR

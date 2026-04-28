@@ -6,7 +6,7 @@ import { useReferenceStore } from '@/store/useReferenceStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMindmapStore } from '@/store/useMindmapStore';
-import { getAllAppData, saveToCloud, getWorkerUrl } from '@/lib/cloudSync';
+import { getAllAppData, saveToCloud, saveToLocalSync, getWorkerUrl } from '@/lib/cloudSync';
 
 export const useAutoSave = (interval = 5000) => {
     const [isSaving, setIsSaving] = useState(false);
@@ -39,22 +39,24 @@ export const useAutoSave = (interval = 5000) => {
             if (!autoSave) return;
 
             const { token } = useAuthStore.getState();
+            const { cloudPath } = useSettingsStore.getState();
             const workerUrl = getWorkerUrl();
             
-            if (!token || !workerUrl || !hasChanges.current || isSaving) return;
+            if ((!token && !cloudPath) || !hasChanges.current || isSaving) return;
             
             setIsSaving(true);
             setError(null);
             
             try {
                 const data = await getAllAppData();
-                const success = await saveToCloud(token, data);
+                const cloudSuccess = token && workerUrl ? await saveToCloud(token, data) : false;
+                const localSuccess = cloudPath ? await saveToLocalSync(data) : false;
                 
-                if (success) {
+                if (cloudSuccess || localSuccess) {
                     setLastSaved(new Date());
                     hasChanges.current = false;
                 } else {
-                    setError('Failed to save to cloud');
+                    setError('Failed to save to cloud or local sync');
                 }
             } catch (err) {
                 setError('Error saving data');

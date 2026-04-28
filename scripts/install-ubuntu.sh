@@ -6,6 +6,8 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/creative-planner}"
 APP_PORT="${APP_PORT:-8080}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 BRANCH="${BRANCH:-main}"
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -51,6 +53,15 @@ if [[ -z "${PUBLIC_HOST}" ]]; then
   exit 1
 fi
 
+if [[ -z "${GOOGLE_CLIENT_ID}" || -z "${GOOGLE_CLIENT_SECRET}" ]]; then
+  cat >&2 <<EOF
+Google OAuth is required for Google sign-in.
+Pass both environment variables before running the installer:
+  sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret REPO_URL=${REPO_URL} bash scripts/install-ubuntu.sh --port ${APP_PORT} --public-host ${PUBLIC_HOST}
+EOF
+  exit 1
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
@@ -76,6 +87,9 @@ cat > "${INSTALL_DIR}/.env.selfhost" <<EOF
 APP_PORT=${APP_PORT}
 PUBLIC_HOST=${PUBLIC_HOST}
 PUBLIC_URL=http://${PUBLIC_HOST}:${APP_PORT}
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 COLLABORA_URL=http://${PUBLIC_HOST}:${APP_PORT}/browser/dist/cool.html
 COLLABORA_DOMAIN=${COLLABORA_DOMAIN_VALUE}
 COLLABORA_ADMIN_USER=admin
@@ -98,6 +112,8 @@ Collabora admin password:
 Next steps:
   1. Open the app in your browser.
   2. Create the first admin account through /bootstrap-admin if you have not done that yet.
-  3. Commit this repo to GitHub and use this script as your one-command installer.
+  3. In Google Cloud Console, add these OAuth settings:
+     Authorized JavaScript origin: http://${PUBLIC_HOST}:${APP_PORT}
+     Authorized redirect URI: http://${PUBLIC_HOST}:${APP_PORT}/auth/google/callback
 
 EOF

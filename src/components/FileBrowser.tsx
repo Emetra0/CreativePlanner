@@ -24,7 +24,7 @@ export default function FileBrowser() {
     const folderLabel = text('Folder');
     const fileLabel = text('File');
   const [files, setFiles] = useState<FileData[]>([]);
-  const { projectPath, setProjectPath } = useSettingsStore();
+    const { projectPath, setProjectPath, cloudPath } = useSettingsStore();
   const { currentPath, setCurrentPath, refreshTrigger, triggerRefresh } = useFileStore();
     const { ensureDocumentForFile } = useOfficeDocumentStore();
   const { theme } = useTheme();
@@ -56,6 +56,7 @@ export default function FileBrowser() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragTargetId, setDragTargetId] = useState<string | null>(null);
         const cloudStorageLabel = text('Cloud Storage');
+        const localSyncLabel = text('Local Sync');
 
         const getItemTypeLabel = (type: 'file' | 'folder') => (type === 'file' ? fileLabel : folderLabel);
 
@@ -156,6 +157,8 @@ export default function FileBrowser() {
           // Check if we are at project root to display friendly name
           if (projectPath && normalize(currentPath) === normalize(projectPath)) {
               name = cloudStorageLabel;
+          } else if (cloudPath && normalize(currentPath) === normalize(cloudPath)) {
+              name = localSyncLabel;
           }
           
           updateActiveTab({
@@ -165,35 +168,46 @@ export default function FileBrowser() {
               historyIndex: newHistory.length - 1
           });
       }
-    }, [currentPath, activeTab, projectPath, cloudStorageLabel]);
+    }, [currentPath, activeTab, projectPath, cloudPath, cloudStorageLabel, localSyncLabel]);
 
   // Helper for path normalization to ensure consistent comparisons
   const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-  const isAtRoot = projectPath ? normalize(currentFolder) === normalize(projectPath) : false;
+  const rootMeta = useMemo(() => {
+      const candidates = [
+          projectPath ? { path: projectPath, label: cloudStorageLabel } : null,
+          cloudPath ? { path: cloudPath, label: localSyncLabel } : null,
+      ].filter(Boolean) as Array<{ path: string; label: string }>;
+
+      const normalizedCurrent = normalize(currentFolder);
+      return candidates.find((candidate) => normalizedCurrent === normalize(candidate.path) || normalizedCurrent.startsWith(`${normalize(candidate.path)}/`) || normalizedCurrent.startsWith(`${normalize(candidate.path)}\\`)) || candidates[0] || null;
+  }, [projectPath, cloudPath, cloudStorageLabel, localSyncLabel, currentFolder]);
+  const activeRootPath = rootMeta?.path || projectPath || cloudPath || '';
+  const activeRootLabel = rootMeta?.label || cloudStorageLabel;
+  const isAtRoot = activeRootPath ? normalize(currentFolder) === normalize(activeRootPath) : false;
 
   // Breadcrumbs Logic
   const breadcrumbs = useMemo(() => {
-      if (!projectPath || !currentFolder) return [];
+      if (!activeRootPath || !currentFolder) return [];
       
-      const normalizedProject = normalize(projectPath);
+      const normalizedProject = normalize(activeRootPath);
       const normalizedCurrent = normalize(currentFolder);
       
       // If at root
       if (normalizedCurrent === normalizedProject) {
-          return [{ name: cloudStorageLabel, path: projectPath }];
+          return [{ name: activeRootLabel, path: activeRootPath }];
       }
       
       // If current path is not inside project path (shouldn't happen but safe guard)
       if (!normalizedCurrent.startsWith(normalizedProject)) {
-          return [{ name: cloudStorageLabel, path: projectPath }];
+          return [{ name: activeRootLabel, path: activeRootPath }];
       }
       
       const relative = normalizedCurrent.slice(normalizedProject.length);
       const segments = relative.split('/').filter(Boolean);
       
-    const crumbs = [{ name: cloudStorageLabel, path: projectPath }];
-      let currentBuild = projectPath;
-      const separator = projectPath.includes('\\') ? '\\' : '/';
+        const crumbs = [{ name: activeRootLabel, path: activeRootPath }];
+            let currentBuild = activeRootPath;
+            const separator = activeRootPath.includes('\\') ? '\\' : '/';
 
       segments.forEach(segment => {
           // Reconstruct path using original separator if possible, or just /
@@ -209,7 +223,7 @@ export default function FileBrowser() {
       });
       
       return crumbs;
-    }, [currentFolder, projectPath, cloudStorageLabel]);
+    }, [currentFolder, activeRootPath, activeRootLabel]);
 
   const handleBreadcrumbDrop = async (e: React.DragEvent, targetPath: string) => {
       e.preventDefault();
@@ -262,13 +276,13 @@ export default function FileBrowser() {
   const pathClean = currentFolder.endsWith(pathSeparator) ? currentFolder.slice(0, -1) : currentFolder;
   const pathLastIndex = pathClean.lastIndexOf(pathSeparator);
   const calculatedParentPath = pathLastIndex !== -1 ? pathClean.substring(0, pathLastIndex) : null;
-  const isParentRoot = calculatedParentPath && projectPath ? normalize(calculatedParentPath) === normalize(projectPath) : false;
+    const isParentRoot = calculatedParentPath && activeRootPath ? normalize(calculatedParentPath) === normalize(activeRootPath) : false;
 
   const loadFiles = async () => {
-    if (currentFolder === 'root' && !projectPath) return;
+    if (currentFolder === 'root' && !activeRootPath) return;
     
     if (searchTerm) {
-        const root = projectPath || 'root';
+        const root = activeRootPath || 'root';
         const data = await searchFiles(searchTerm, root);
         setFiles(data);
     } else {
@@ -291,7 +305,7 @@ export default function FileBrowser() {
 
   useEffect(() => {
     loadFiles();
-  }, [currentFolder, projectPath, searchTerm, refreshTrigger]);
+    }, [currentFolder, activeRootPath, searchTerm, refreshTrigger]);
 
   // Helper to update active tab
   const updateActiveTab = (updates: Partial<Tab>) => {
@@ -643,7 +657,7 @@ export default function FileBrowser() {
       if (lastIndex !== -1) {
           const parentPath = cleanPath.substring(0, lastIndex);
           // If parent is root, prevent drop
-          if (projectPath && normalize(parentPath) === normalize(projectPath)) {
+        if (activeRootPath && normalize(parentPath) === normalize(activeRootPath)) {
                e.dataTransfer.dropEffect = 'none';
                setDragTargetId(null);
                return;
@@ -675,10 +689,10 @@ export default function FileBrowser() {
           const parentPath = cleanPath.substring(0, lastIndex);
           
           // Security check: don't go above project path
-          if (projectPath && !parentPath.startsWith(projectPath)) return;
+          if (activeRootPath && !normalize(parentPath).startsWith(normalize(activeRootPath))) return;
 
           // Prevent dropping to root
-          if (projectPath && normalize(parentPath) === normalize(projectPath)) return;
+          if (activeRootPath && normalize(parentPath) === normalize(activeRootPath)) return;
 
           const newPath = `${parentPath}${separator}${sourceFile.name}`;
           
@@ -700,7 +714,7 @@ export default function FileBrowser() {
       
       if (lastIndex !== -1) {
           const parentPath = cleanPath.substring(0, lastIndex);
-          if (projectPath && !normalize(parentPath).startsWith(normalize(projectPath))) return;
+          if (activeRootPath && !normalize(parentPath).startsWith(normalize(activeRootPath))) return;
           
           setCurrentPath(parentPath);
       }
