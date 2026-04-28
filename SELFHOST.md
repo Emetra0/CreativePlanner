@@ -7,10 +7,12 @@ This repo can be installed on an Ubuntu server with one script after it is uploa
 Replace the repo URL with your real GitHub repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo REPO_URL=https://github.com/Emetra0/CreativePlanner.git bash -s -- --port 8080
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
 ```
 
 This default install uses local account login only. Google sign-in is optional, not required.
+
+The installer is already pinned to this GitHub repo by default, so you do not need to pass `REPO_URL` for normal installs.
 
 Optional flags:
 
@@ -56,7 +58,7 @@ If you want Google sign-in, create a Google OAuth Web application in Google Clou
 Run the installer like this:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret REPO_URL=https://github.com/Emetra0/CreativePlanner.git bash -s -- --port 8080 --public-host your.domain.or.ip
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.domain.or.ip
 ```
 
 Use these OAuth app settings in Google Cloud Console:

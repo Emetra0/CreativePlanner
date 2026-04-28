@@ -50,7 +50,7 @@ For local development, configure these files:
 For the Ubuntu self-hosted install, Google sign-in is optional. If you want it, the installer writes these values into `.env.selfhost` when you provide them:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret REPO_URL=https://github.com/Emetra0/CreativePlanner.git bash -s -- --port 8080 --public-host your.domain.or.ip
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.domain.or.ip
 ```
 
 If you enable Google sign-in, use the public app URL for both values below:
@@ -77,13 +77,19 @@ For web usage on Ubuntu, use the self-hosted Docker stack. It starts the fronten
 Replace the repo URL and public host with your own values:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo REPO_URL=https://github.com/your-user/your-repo.git bash -s -- --port 8080 --public-host your.server.ip.or.domain
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
 ```
 
-If you want optional Google sign-in too, add the Google variables before `REPO_URL`:
+If you want to force a specific public host instead of using the server's detected IP:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret REPO_URL=https://github.com/your-user/your-repo.git bash -s -- --port 8080 --public-host your.server.ip.or.domain
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080 --public-host your.server.ip.or.domain
+```
+
+If you want optional Google sign-in too, add the Google variables before `bash`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com GOOGLE_CLIENT_SECRET=your-client-secret bash -s -- --port 8080 --public-host your.server.ip.or.domain
 ```
 
 What this does:
@@ -217,7 +223,7 @@ If you want this repo to install as a full self-hosted service on Ubuntu from a 
 Once the repo is on GitHub, the intended install flow is a single command like:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo REPO_URL=https://github.com/Emetra0/CreativePlanner.git bash -s -- --port 8080
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
 ```
 
 That installer brings up the frontend, backend, MariaDB, and Collabora stack together through `docker-compose.selfhost.yml`, and the backend applies the bundled schema and migrations automatically on first boot.

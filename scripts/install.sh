@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-}"
+DEFAULT_REPO_URL="https://github.com/Emetra0/CreativePlanner.git"
+REPO_URL="${REPO_URL:-${DEFAULT_REPO_URL}}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/creative-planner}"
 APP_PORT="${APP_PORT:-8080}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
@@ -62,12 +63,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-if [[ -z "${REPO_URL}" ]]; then
-  echo "REPO_URL is required. Example:" >&2
-  echo "  sudo REPO_URL=https://github.com/Emetra0/CreativePlanner.git bash scripts/install.sh --port 8080" >&2
-  exit 1
-fi
 
 if [[ -z "${PUBLIC_HOST}" ]]; then
   PUBLIC_HOST="$(hostname -I | awk '{print $1}')"
@@ -175,6 +170,7 @@ Next steps:
   1. Use local accounts by default for this self-hosted install.
   2. If this is the first install, create the first admin through /bootstrap-admin.
   3. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
+  4. Repository source: ${REPO_URL}
 
 EOF
 
