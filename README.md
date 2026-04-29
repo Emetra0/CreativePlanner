@@ -96,14 +96,17 @@ What this does:
 2. Installs the app into `/opt/creative-planner` by default.
 3. Uses the local cloned repo as the install source when you run `scripts/install.sh` from a checkout.
 4. Keeps the GitHub repo as the update source for later `scripts/update.sh` runs.
-5. Uses HTTPS by default on port `8443`, and automatically moves upward if that port is already in use.
-6. Creates `.env.selfhost` with generated secrets.
-7. Generates a self-signed TLS certificate for the detected public host.
-8. Verifies that the HTTPS page actually responds before reporting success.
-9. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
-10. Applies the bundled schema and all backend migrations automatically.
+5. Reuses the existing configured app port on reinstalls when possible, and stops the old Creative Planner stack before checking for conflicts.
+6. Uses HTTPS by default on port `8443`, and automatically moves upward only if that port is still busy after the old stack is stopped.
+7. Creates `.env.selfhost` with generated secrets.
+8. Generates a self-signed TLS certificate for the detected public host.
+9. Verifies that the HTTPS page actually responds before reporting success.
+10. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
+11. Applies the bundled schema and all backend migrations automatically.
 
 If you omit `--port`, the installer starts from `8443`. If that port is already taken, it automatically picks the next free port and prints the final HTTPS URL at the end of installation.
+
+If you rerun the installer on the same machine, it first stops the old Creative Planner containers and tries to keep the existing app port instead of drifting to a new one.
 
 ### 4. Open the app
 
@@ -171,6 +174,8 @@ Run:
 cd /opt/creative-planner
 sudo sh scripts/update.sh
 ```
+
+The updater stops the old Creative Planner containers before starting the rebuilt stack, so the previous app port is released and reused instead of forcing a new port.
 
 ## Cloud And Local Storage
 

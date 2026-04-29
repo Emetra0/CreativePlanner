@@ -48,11 +48,12 @@ If `--port` is omitted, the installer starts from `8443`. If that port is alread
 2. Installs the app into `/opt/creative-planner`.
 3. Uses the local checkout as the install source when you run it from a cloned repo.
 4. Keeps the GitHub origin as the update source.
-5. Detects a free HTTPS host port for the web app, starting from `8443`.
-6. Writes `.env.selfhost` with generated secrets for WOPI, Collabora, and MariaDB.
-7. Generates a self-signed TLS certificate for the detected public host.
-8. Builds and starts the full stack from `docker-compose.selfhost.yml`.
-9. Verifies that the HTTPS login page is reachable before reporting success.
+5. Stops the old Creative Planner stack before reinstalling or updating, so the previous app port is freed first.
+6. Detects a free HTTPS host port for the web app, starting from `8443`, and reuses the existing configured port when possible.
+7. Writes `.env.selfhost` with generated secrets for WOPI, Collabora, and MariaDB.
+8. Generates a self-signed TLS certificate for the detected public host.
+9. Builds and starts the full stack from `docker-compose.selfhost.yml`.
+10. Verifies that the HTTPS login page is reachable before reporting success.
 
 ## Services included
 
@@ -84,3 +85,5 @@ When installation finishes, the terminal prints:
 - quick `docker compose` commands for status and logs
 
 If the requested port was already in use, the terminal also tells you which replacement port was selected automatically.
+
+When you update or rerun the installer, the scripts stop the old Creative Planner containers first so the previous app port can be reused instead of moving to a new one.

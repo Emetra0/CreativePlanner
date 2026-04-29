@@ -78,6 +78,11 @@ random_secret() {
   openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24
 }
 
+port_in_use() {
+  port="$1"
+  ss -ltnH "( sport = :${port} )" 2>/dev/null | grep -q "."
+}
+
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -156,6 +161,14 @@ set_env_value "TLS_CERT_DIR" "${TLS_CERT_DIR_RELATIVE}"
 git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git reset --hard "origin/${BRANCH}"
+${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost down --remove-orphans >/dev/null 2>&1 || true
+
+if port_in_use "${APP_PORT}"; then
+  echo "Self-host update failed: port ${APP_PORT} is still in use after stopping the old Creative Planner stack." >&2
+  echo "Free that port or change APP_PORT in .env.selfhost before rerunning scripts/update.sh." >&2
+  exit 1
+fi
+
 ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build --remove-orphans
 
 if ! wait_for_url "https://${PUBLIC_HOST}:${APP_PORT}" 45; then

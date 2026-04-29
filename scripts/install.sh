@@ -14,6 +14,7 @@ GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 SELFHOST_DEFAULT_ADMIN_USERNAME="${SELFHOST_DEFAULT_ADMIN_USERNAME:-admin}"
 SELFHOST_DEFAULT_ADMIN_EMAIL="${SELFHOST_DEFAULT_ADMIN_EMAIL:-admin@local}"
 SELFHOST_DEFAULT_ADMIN_PASSWORD="${SELFHOST_DEFAULT_ADMIN_PASSWORD:-}"
+PORT_WAS_EXPLICIT="false"
 
 port_in_use() {
   local port="$1"
@@ -80,6 +81,32 @@ wait_for_url() {
   return 1
 }
 
+read_env_value() {
+  local env_file="$1"
+  local key="$2"
+
+  if [[ ! -f "${env_file}" ]]; then
+    return 1
+  fi
+
+  grep "^${key}=" "${env_file}" | tail -n 1 | cut -d= -f2-
+}
+
+stop_existing_stack() {
+  local install_dir="$1"
+  local compose_bin="$2"
+  local env_file="${install_dir}/.env.selfhost"
+
+  if [[ ! -f "${env_file}" || ! -f "${install_dir}/docker-compose.selfhost.yml" ]]; then
+    return 0
+  fi
+
+  (
+    cd "${install_dir}"
+    ${compose_bin} -f docker-compose.selfhost.yml --env-file .env.selfhost down --remove-orphans
+  ) >/dev/null 2>&1 || true
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo-url)
@@ -92,6 +119,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --port)
       APP_PORT="$2"
+      PORT_WAS_EXPLICIT="true"
       shift 2
       ;;
     --public-host)
@@ -179,6 +207,21 @@ systemctl enable --now docker
 ensure_compose_plugin
 apt-get remove -y docker-compose >/dev/null 2>&1 || true
 
+COMPOSE_BIN="docker compose"
+if ! docker compose version >/dev/null 2>&1; then
+  echo "Docker Compose v2 is not available. Install 'docker-compose-v2' or 'docker-compose-plugin', then rerun the installer." >&2
+  exit 1
+fi
+
+if [[ "${PORT_WAS_EXPLICIT}" != "true" ]]; then
+  EXISTING_APP_PORT="$(read_env_value "${INSTALL_DIR}/.env.selfhost" "APP_PORT" || true)"
+  if [[ -n "${EXISTING_APP_PORT}" ]]; then
+    APP_PORT="${EXISTING_APP_PORT}"
+  fi
+fi
+
+stop_existing_stack "${INSTALL_DIR}" "${COMPOSE_BIN}"
+
 REQUESTED_APP_PORT="${APP_PORT}"
 APP_PORT="$(pick_available_port "${APP_PORT}")"
 AUTO_SELECTED_PORT="false"
@@ -187,12 +230,6 @@ if [[ "${APP_PORT}" != "${REQUESTED_APP_PORT}" ]]; then
 fi
 LOGIN_URL="https://${PUBLIC_HOST}:${APP_PORT}"
 FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
-
-COMPOSE_BIN="docker compose"
-if ! docker compose version >/dev/null 2>&1; then
-  echo "Docker Compose v2 is not available. Install 'docker-compose-v2' or 'docker-compose-plugin', then rerun the installer." >&2
-  exit 1
-fi
 
 mkdir -p "$(dirname "${INSTALL_DIR}")"
 
@@ -312,7 +349,7 @@ EOF
 if [[ "${AUTO_SELECTED_PORT}" = "true" ]]; then
   cat <<EOF
 Note:
-  Port ${REQUESTED_APP_PORT} was already in use on this Ubuntu server.
+  Port ${REQUESTED_APP_PORT} was still in use after the old Creative Planner stack was stopped.
   The installer automatically selected port ${APP_PORT} instead.
 
 EOF
