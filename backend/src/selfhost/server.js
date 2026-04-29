@@ -1,8 +1,6 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import worker from '../worker.js';
-import { attachCollaborationServer, createCollaborationNamespace } from './collaboration.js';
 import { createD1CompatDatabase, createMariaDbPool, initializeMariaDb } from './db.js';
 
 const currentFile = fileURLToPath(import.meta.url);
@@ -44,8 +42,23 @@ async function readRequestBody(request) {
 
 async function main() {
   const port = Number(process.env.PORT || 8787);
+  console.log('[selfhost] Starting backend runtime');
+
+  console.log('[selfhost] Loading worker module');
+  const workerModule = await import('../worker.js');
+  const worker = workerModule.default;
+
+  console.log('[selfhost] Loading collaboration module');
+  const collaborationModule = await import('./collaboration.js');
+  const { attachCollaborationServer, createCollaborationNamespace } = collaborationModule;
+
+  console.log('[selfhost] Connecting to MariaDB');
   const pool = await createMariaDbPool(process.env);
+
+  console.log('[selfhost] Running MariaDB initialization');
   await initializeMariaDb(pool, backendRoot, process.env);
+
+  console.log('[selfhost] Preparing runtime environment');
 
   const env = {
     DB: createD1CompatDatabase(pool),
@@ -82,6 +95,7 @@ async function main() {
     }
   });
 
+  console.log('[selfhost] Attaching collaboration server');
   attachCollaborationServer(server, env);
 
   server.listen(port, '0.0.0.0', () => {
