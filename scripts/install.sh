@@ -6,7 +6,7 @@ CURRENT_REPO_DIR="$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)"
 DEFAULT_REPO_URL="https://github.com/Emetra0/CreativePlanner.git"
 REPO_URL="${REPO_URL:-}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/creative-planner}"
-APP_PORT="${APP_PORT:-8080}"
+APP_PORT="${APP_PORT:-8443}"
 PUBLIC_HOST="${PUBLIC_HOST:-}"
 BRANCH="${BRANCH:-main}"
 GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
@@ -35,6 +35,46 @@ pick_available_port() {
   done
 
   printf '%s\n' "$candidate"
+}
+
+generate_self_signed_cert() {
+  local cert_dir="$1"
+  local host="$2"
+  local cert_path="${cert_dir}/selfhost.crt"
+  local key_path="${cert_dir}/selfhost.key"
+  local san_prefix="DNS"
+
+  if [[ -f "${cert_path}" && -f "${key_path}" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${cert_dir}"
+
+  if [[ "${host}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${host}" == *:* ]]; then
+    san_prefix="IP"
+  fi
+
+  openssl req -x509 -nodes -newkey rsa:2048 -sha256 \
+    -days 825 \
+    -keyout "${key_path}" \
+    -out "${cert_path}" \
+    -subj "/CN=${host}" \
+    -addext "subjectAltName=${san_prefix}:${host}" >/dev/null 2>&1
+}
+
+wait_for_url() {
+  local url="$1"
+  local attempts="${2:-30}"
+  local attempt
+
+  for attempt in $(seq 1 "${attempts}"); do
+    if curl -kfsS --connect-timeout 5 "${url}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  return 1
 }
 
 while [[ $# -gt 0 ]]; do
@@ -142,7 +182,7 @@ AUTO_SELECTED_PORT="false"
 if [[ "${APP_PORT}" != "${REQUESTED_APP_PORT}" ]]; then
   AUTO_SELECTED_PORT="true"
 fi
-LOGIN_URL="http://${PUBLIC_HOST}:${APP_PORT}"
+LOGIN_URL="https://${PUBLIC_HOST}:${APP_PORT}"
 FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
 
 COMPOSE_BIN="docker compose"
@@ -169,6 +209,10 @@ else
   fi
 fi
 
+TLS_CERT_DIR_RELATIVE="./.selfhost/certs"
+TLS_CERT_DIR_ABSOLUTE="${INSTALL_DIR}/.selfhost/certs"
+generate_self_signed_cert "${TLS_CERT_DIR_ABSOLUTE}" "${PUBLIC_HOST}"
+
 WOPI_SECRET_VALUE="$(openssl rand -hex 32)"
 COLLABORA_PASSWORD_VALUE="$(openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24)"
 COLLABORA_DOMAIN_VALUE="$(printf '%s' "${PUBLIC_HOST}" | sed 's/[.[\*^$()+?{|]/\\&/g')"
@@ -178,8 +222,8 @@ DB_ROOT_PASSWORD_VALUE="$(openssl rand -base64 32 | tr -d '=+/\n' | cut -c1-32)"
 cat > "${INSTALL_DIR}/.env.selfhost" <<EOF
 APP_PORT=${APP_PORT}
 PUBLIC_HOST=${PUBLIC_HOST}
-PUBLIC_URL=http://${PUBLIC_HOST}:${APP_PORT}
-COLLABORA_URL=http://${PUBLIC_HOST}:${APP_PORT}/browser/dist/cool.html
+PUBLIC_URL=https://${PUBLIC_HOST}:${APP_PORT}
+COLLABORA_URL=https://${PUBLIC_HOST}:${APP_PORT}/browser/dist/cool.html
 COLLABORA_DOMAIN=${COLLABORA_DOMAIN_VALUE}
 COLLABORA_ADMIN_USER=admin
 COLLABORA_ADMIN_PASSWORD=${COLLABORA_PASSWORD_VALUE}
@@ -192,10 +236,18 @@ DB_USER=creative_planner
 DB_PASSWORD=${DB_PASSWORD_VALUE}
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD_VALUE}
 SELFHOST_DATA_DIR=/app/data/user-storage
+TLS_CERT_DIR=${TLS_CERT_DIR_RELATIVE}
 EOF
 
 cd "${INSTALL_DIR}"
 ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build
+
+if ! wait_for_url "${LOGIN_URL}" 45; then
+  echo "Creative Planner started, but the HTTPS page did not become reachable at ${LOGIN_URL}." >&2
+  ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost ps >&2 || true
+  ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost logs --tail=80 frontend backend >&2 || true
+  exit 1
+fi
 
 cat <<EOF
 
@@ -204,7 +256,7 @@ Creative Planner installation completed.
 Detected server host:
   ${PUBLIC_HOST}
 
-App port:
+HTTPS app port:
   ${APP_PORT}
 
 Login flow:
@@ -222,6 +274,10 @@ MariaDB database:
 Environment file:
   ${INSTALL_DIR}/.env.selfhost
 
+TLS certificate files:
+  ${TLS_CERT_DIR_ABSOLUTE}/selfhost.crt
+  ${TLS_CERT_DIR_ABSOLUTE}/selfhost.key
+
 Manage the stack:
   cd ${INSTALL_DIR}
   ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost ps
@@ -230,9 +286,10 @@ Manage the stack:
 Next steps:
   1. Use local accounts by default for this self-hosted install.
   2. If this is the first install, create the first admin through /bootstrap-admin.
-  3. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
-  4. Install source: ${INSTALL_SOURCE_DESCRIPTION}
-  5. Update source: ${REPO_URL}
+  3. Your browser will show a certificate warning at first because the installer creates a self-signed HTTPS certificate.
+  4. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
+  5. Install source: ${INSTALL_SOURCE_DESCRIPTION}
+  6. Update source: ${REPO_URL}
 
 EOF
 

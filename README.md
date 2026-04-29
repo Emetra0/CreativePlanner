@@ -65,7 +65,7 @@ Clone the repo on the Ubuntu server and run the installer from that local checko
 ```bash
 git clone https://github.com/Emetra0/CreativePlanner.git
 cd CreativePlanner
-sudo bash scripts/install.sh --port 8080
+sudo bash scripts/install.sh
 ```
 
 If you want to force a specific public host instead of using the server's detected IP:
@@ -73,7 +73,7 @@ If you want to force a specific public host instead of using the server's detect
 ```bash
 git clone https://github.com/Emetra0/CreativePlanner.git
 cd CreativePlanner
-sudo bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
+sudo bash scripts/install.sh --public-host your.server.ip.or.domain
 ```
 
 ### 3. Alternative remote install
@@ -81,13 +81,13 @@ sudo bash scripts/install.sh --port 8080 --public-host your.server.ip.or.domain
 If you prefer not to clone first, you can still stream the installer directly from GitHub:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s --
 ```
 
 With a fixed public host:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --port 8080 --public-host your.server.ip.or.domain
+curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/scripts/install.sh | sudo bash -s -- --public-host your.server.ip.or.domain
 ```
 
 What this does:
@@ -96,12 +96,14 @@ What this does:
 2. Installs the app into `/opt/creative-planner` by default.
 3. Uses the local cloned repo as the install source when you run `scripts/install.sh` from a checkout.
 4. Keeps the GitHub repo as the update source for later `scripts/update.sh` runs.
-5. Detects a free host port, starting from the requested port and moving upward if needed.
+5. Uses HTTPS by default on port `8443`, and automatically moves upward if that port is already in use.
 6. Creates `.env.selfhost` with generated secrets.
-7. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
-8. Applies the bundled schema and all backend migrations automatically.
+7. Generates a self-signed TLS certificate for the detected public host.
+8. Verifies that the HTTPS page actually responds before reporting success.
+9. Starts `frontend`, `backend`, `mariadb`, and `collabora`.
+10. Applies the bundled schema and all backend migrations automatically.
 
-If you omit `--port`, the installer starts from `8080`. If that port is already taken, it automatically picks the next free port and prints the final URL at the end of installation.
+If you omit `--port`, the installer starts from `8443`. If that port is already taken, it automatically picks the next free port and prints the final HTTPS URL at the end of installation.
 
 ### 4. Open the app
 
@@ -116,16 +118,16 @@ After the installer finishes, use the URL shown in the terminal summary. It incl
 If the installer kept the requested default port, the URL will be:
 
 ```text
-http://your.server.ip.or.domain:8080
+https://your.server.ip.or.domain:8443
 ```
 
 If this is the first install, create the first admin account through:
 
 ```text
-http://your.server.ip.or.domain:8080/bootstrap-admin
+https://your.server.ip.or.domain:8443/bootstrap-admin
 ```
 
-After creating that first admin, go back to the main app URL and log in with the account you just created.
+After creating that first admin, go back to the main app URL and log in with the account you just created. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
 
 ### 5. Manage the running app
 

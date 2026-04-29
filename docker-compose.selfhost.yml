@@ -70,8 +70,10 @@ services:
       - backend
       - collabora
     restart: unless-stopped
+    volumes:
+      - ${TLS_CERT_DIR:-./.selfhost/certs}:/etc/nginx/certs:ro
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${APP_PORT:-8443}:443"
 
 volumes:
   mariadb_data:

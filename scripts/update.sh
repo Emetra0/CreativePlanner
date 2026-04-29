@@ -17,6 +17,63 @@ fi
 
 BRANCH="${SELFHOST_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
+set_env_value() {
+  local key="$1"
+  local value="$2"
+
+  if grep -q "^${key}=" .env.selfhost; then
+    sed -i "s|^${key}=.*|${key}=${value}|" .env.selfhost
+  else
+    printf '%s=%s\n' "${key}" "${value}" >> .env.selfhost
+  fi
+}
+
+generate_self_signed_cert() {
+  local cert_dir="$1"
+  local host="$2"
+  local cert_path="${cert_dir}/selfhost.crt"
+  local key_path="${cert_dir}/selfhost.key"
+  local san_prefix="DNS"
+
+  if [ -f "${cert_path}" ] && [ -f "${key_path}" ]; then
+    return 0
+  fi
+
+  mkdir -p "${cert_dir}"
+
+  case "${host}" in
+    *:*) san_prefix="IP" ;;
+    *)
+      if printf '%s' "${host}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+        san_prefix="IP"
+      fi
+      ;;
+  esac
+
+  openssl req -x509 -nodes -newkey rsa:2048 -sha256 \
+    -days 825 \
+    -keyout "${key_path}" \
+    -out "${cert_path}" \
+    -subj "/CN=${host}" \
+    -addext "subjectAltName=${san_prefix}:${host}" >/dev/null 2>&1
+}
+
+wait_for_url() {
+  url="$1"
+  attempts="${2:-30}"
+  attempt=1
+
+  while [ "${attempt}" -le "${attempts}" ]; do
+    if curl -kfsS --connect-timeout 5 "${url}" >/dev/null 2>&1; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 2
+  done
+
+  return 1
+}
+
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -54,7 +111,34 @@ ensure_compose_plugin() {
 COMPOSE_BIN="docker compose"
 ensure_compose_plugin
 
+APP_PORT="$(grep '^APP_PORT=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
+PUBLIC_HOST="$(grep '^PUBLIC_HOST=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
+
+if [ -z "${APP_PORT}" ]; then
+  APP_PORT="8443"
+fi
+
+if [ -z "${PUBLIC_HOST}" ]; then
+  echo "Self-host update failed: PUBLIC_HOST is missing from .env.selfhost" >&2
+  exit 1
+fi
+
+TLS_CERT_DIR_RELATIVE="./.selfhost/certs"
+TLS_CERT_DIR_ABSOLUTE="${WORKSPACE_DIR}/.selfhost/certs"
+generate_self_signed_cert "${TLS_CERT_DIR_ABSOLUTE}" "${PUBLIC_HOST}"
+
+set_env_value "PUBLIC_URL" "https://${PUBLIC_HOST}:${APP_PORT}"
+set_env_value "COLLABORA_URL" "https://${PUBLIC_HOST}:${APP_PORT}/browser/dist/cool.html"
+set_env_value "TLS_CERT_DIR" "${TLS_CERT_DIR_RELATIVE}"
+
 git fetch origin "${BRANCH}"
 git checkout "${BRANCH}"
 git reset --hard "origin/${BRANCH}"
 ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost up -d --build --remove-orphans
+
+if ! wait_for_url "https://${PUBLIC_HOST}:${APP_PORT}" 45; then
+  echo "Self-host update finished, but the HTTPS page is not reachable at https://${PUBLIC_HOST}:${APP_PORT}." >&2
+  ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost ps >&2 || true
+  ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost logs --tail=80 frontend backend >&2 || true
+  exit 1
+fi
