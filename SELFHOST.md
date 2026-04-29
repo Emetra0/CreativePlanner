@@ -44,7 +44,7 @@ If `--port` is omitted, the installer starts from `8080`. If that port is alread
 
 ## What the installer does
 
-1. Installs `docker.io` and `docker-compose`.
+1. Installs `docker.io` and a modern Docker Compose v2 package (`docker-compose-v2` on Ubuntu, or `docker-compose-plugin` when available).
 2. Installs the app into `/opt/creative-planner`.
 3. Uses the local checkout as the install source when you run it from a cloned repo.
 4. Keeps the GitHub origin as the update source.

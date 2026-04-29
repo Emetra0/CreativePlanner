@@ -100,14 +100,41 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+ensure_compose_plugin() {
+  if docker compose version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local compose_pkg=""
+  for candidate in docker-compose-v2 docker-compose-plugin; do
+    if apt-cache show "${candidate}" >/dev/null 2>&1; then
+      compose_pkg="${candidate}"
+      break
+    fi
+  done
+
+  if [[ -z "${compose_pkg}" ]]; then
+    echo "Unable to find a modern Docker Compose v2 package in the configured apt repositories." >&2
+    echo "Install either 'docker-compose-v2' or 'docker-compose-plugin', then rerun this installer." >&2
+    exit 1
+  fi
+
+  if ! apt-get install -y "${compose_pkg}"; then
+    echo "Failed to install ${compose_pkg}. The self-host installer requires the modern 'docker compose' command." >&2
+    exit 1
+  fi
+
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "Installed ${compose_pkg}, but 'docker compose' is still unavailable." >&2
+    exit 1
+  fi
+}
+
 apt-get update
 apt-get install -y ca-certificates curl git openssl docker.io
-if ! apt-get install -y docker-compose-plugin; then
-  echo "Failed to install docker-compose-plugin. The self-host installer requires the modern 'docker compose' plugin." >&2
-  exit 1
-fi
-apt-get remove -y docker-compose >/dev/null 2>&1 || true
 systemctl enable --now docker
+ensure_compose_plugin
+apt-get remove -y docker-compose >/dev/null 2>&1 || true
 
 REQUESTED_APP_PORT="${APP_PORT}"
 APP_PORT="$(pick_available_port "${APP_PORT}")"
@@ -120,7 +147,7 @@ FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
 
 COMPOSE_BIN="docker compose"
 if ! docker compose version >/dev/null 2>&1; then
-  echo "Docker Compose plugin is not available. Install it with: sudo apt-get install -y docker-compose-plugin" >&2
+  echo "Docker Compose v2 is not available. Install 'docker-compose-v2' or 'docker-compose-plugin', then rerun the installer." >&2
   exit 1
 fi
 

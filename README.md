@@ -92,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/Emetra0/CreativePlanner/main/script
 
 What this does:
 
-1. Installs Docker and Docker Compose.
+1. Installs Docker and a modern Docker Compose v2 package (`docker-compose-v2` on Ubuntu, or `docker-compose-plugin` when available).
 2. Installs the app into `/opt/creative-planner` by default.
 3. Uses the local cloned repo as the install source when you run `scripts/install.sh` from a checkout.
 4. Keeps the GitHub repo as the update source for later `scripts/update.sh` runs.
@@ -165,7 +165,7 @@ Run:
 
 ```bash
 cd /opt/creative-planner
-sh scripts/update.sh
+sudo sh scripts/update.sh
 ```
 
 ## Cloud And Local Storage
