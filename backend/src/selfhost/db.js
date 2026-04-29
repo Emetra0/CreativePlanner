@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 const UPSERT_REGEX = /ON\s+CONFLICT\s*\(([^)]+)\)\s*DO\s+UPDATE\s+SET\s+([\s\S]+)$/i;
@@ -104,6 +105,51 @@ function splitSqlStatements(content) {
   return statements;
 }
 
+async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.webcrypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits', 'deriveKey'],
+  );
+  const key = await crypto.webcrypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(salt),
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+  const exported = await crypto.webcrypto.subtle.exportKey('raw', key);
+  return Buffer.from(exported).toString('base64');
+}
+
+async function ensureDefaultSelfhostAdmin(connection, env = process.env) {
+  const defaultPassword = env.SELFHOST_DEFAULT_ADMIN_PASSWORD || '';
+  if (!defaultPassword) return;
+
+  const [rows] = await connection.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+  if (Array.isArray(rows) && rows.length > 0) return;
+
+  const username = (env.SELFHOST_DEFAULT_ADMIN_USERNAME || 'admin').trim() || 'admin';
+  const email = (env.SELFHOST_DEFAULT_ADMIN_EMAIL || 'admin@local').trim() || 'admin@local';
+  const salt = crypto.randomUUID();
+  const hash = await hashPassword(defaultPassword, salt);
+  const storedHash = `${salt}:${hash}`;
+  const userId = crypto.randomUUID();
+
+  await connection.query(
+    'INSERT INTO users (id, email, username, password_hash, created_at, role, status, subscription_status, auth_provider, is_bootstrap) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [userId, email, username, storedHash, Date.now(), 'admin', 'active', 'free', 'local', 1],
+  );
+}
+
 async function executeSqlFile(connection, sqlPath) {
   const content = await fs.readFile(sqlPath, 'utf8');
   const statements = splitSqlStatements(content);
@@ -160,7 +206,7 @@ export async function createMariaDbPool(env = process.env) {
   throw lastError || new Error('MariaDB connection failed');
 }
 
-export async function initializeMariaDb(pool, backendRoot) {
+export async function initializeMariaDb(pool, backendRoot, env = process.env) {
   const connection = await pool.getConnection();
   try {
     await connection.query(`
@@ -189,6 +235,8 @@ export async function initializeMariaDb(pool, backendRoot) {
       await executeSqlFile(connection, path.join(backendRoot, fileName));
       await connection.query('INSERT INTO selfhost_migrations (name, applied_at) VALUES (?, ?)', [fileName, Date.now()]);
     }
+
+    await ensureDefaultSelfhostAdmin(connection, env);
   } finally {
     connection.release();
   }

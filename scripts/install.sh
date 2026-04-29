@@ -11,6 +11,9 @@ PUBLIC_HOST="${PUBLIC_HOST:-}"
 BRANCH="${BRANCH:-main}"
 GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
 GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
+SELFHOST_DEFAULT_ADMIN_USERNAME="${SELFHOST_DEFAULT_ADMIN_USERNAME:-admin}"
+SELFHOST_DEFAULT_ADMIN_EMAIL="${SELFHOST_DEFAULT_ADMIN_EMAIL:-admin@local}"
+SELFHOST_DEFAULT_ADMIN_PASSWORD="${SELFHOST_DEFAULT_ADMIN_PASSWORD:-}"
 
 port_in_use() {
   local port="$1"
@@ -218,6 +221,11 @@ COLLABORA_PASSWORD_VALUE="$(openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24
 COLLABORA_DOMAIN_VALUE="$(printf '%s' "${PUBLIC_HOST}" | sed 's/[.[\*^$()+?{|]/\\&/g')"
 DB_PASSWORD_VALUE="$(openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24)"
 DB_ROOT_PASSWORD_VALUE="$(openssl rand -base64 32 | tr -d '=+/\n' | cut -c1-32)"
+DEFAULT_ADMIN_PASSWORD_VALUE="${SELFHOST_DEFAULT_ADMIN_PASSWORD}"
+
+if [[ -z "${DEFAULT_ADMIN_PASSWORD_VALUE}" ]]; then
+  DEFAULT_ADMIN_PASSWORD_VALUE="$(openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24)"
+fi
 
 cat > "${INSTALL_DIR}/.env.selfhost" <<EOF
 APP_PORT=${APP_PORT}
@@ -237,6 +245,9 @@ DB_PASSWORD=${DB_PASSWORD_VALUE}
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD_VALUE}
 SELFHOST_DATA_DIR=/app/data/user-storage
 TLS_CERT_DIR=${TLS_CERT_DIR_RELATIVE}
+SELFHOST_DEFAULT_ADMIN_USERNAME=${SELFHOST_DEFAULT_ADMIN_USERNAME}
+SELFHOST_DEFAULT_ADMIN_EMAIL=${SELFHOST_DEFAULT_ADMIN_EMAIL}
+SELFHOST_DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD_VALUE}
 EOF
 
 cd "${INSTALL_DIR}"
@@ -260,10 +271,15 @@ HTTPS app port:
   ${APP_PORT}
 
 Login flow:
-  1. On the first install, open the First admin setup URL shown at the end.
-  2. Create the first admin account on that bootstrap page.
-  3. After that page locks, return to the Login URL and sign in.
-  4. Future visitors are sent to the normal login page instead of bootstrap setup.
+  1. Open the Login URL shown at the end of this installer output.
+  2. Sign in with the default local admin credentials printed below.
+  3. Change or replace that admin account after you finish first-time setup.
+  4. The bootstrap page remains locked because the installer already created the first admin.
+
+Default local admin account:
+  Login username: ${SELFHOST_DEFAULT_ADMIN_USERNAME}
+  Login email: ${SELFHOST_DEFAULT_ADMIN_EMAIL}
+  Login password: ${DEFAULT_ADMIN_PASSWORD_VALUE}
 
 Collabora admin password:
   ${COLLABORA_PASSWORD_VALUE}
@@ -285,7 +301,7 @@ Manage the stack:
 
 Next steps:
   1. Use local accounts by default for this self-hosted install.
-  2. If this is the first install, create the first admin through the bootstrap page before anyone logs in.
+  2. Sign in with the default local admin account printed above.
   3. Your browser will show a certificate warning at first because the installer creates a self-signed HTTPS certificate.
   4. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
   5. Install source: ${INSTALL_SOURCE_DESCRIPTION}

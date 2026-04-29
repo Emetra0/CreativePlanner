@@ -45,7 +45,7 @@ async function readRequestBody(request) {
 async function main() {
   const port = Number(process.env.PORT || 8787);
   const pool = await createMariaDbPool(process.env);
-  await initializeMariaDb(pool, backendRoot);
+  await initializeMariaDb(pool, backendRoot, process.env);
 
   const env = {
     DB: createD1CompatDatabase(pool),

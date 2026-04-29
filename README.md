@@ -112,7 +112,7 @@ After the installer finishes, use the URL shown in the terminal summary. It incl
 - The detected server host
 - The final app port
 - The exact Login URL
-- The exact First admin setup URL
+- The default local admin username, email, and password
 - The `.env.selfhost` file path
 
 If the installer kept the requested default port, the URL will be:
@@ -121,13 +121,15 @@ If the installer kept the requested default port, the URL will be:
 https://your.server.ip.or.domain:8443
 ```
 
-If this is the first install, create the first admin account through:
+The installer also creates a local admin account automatically and prints the credentials in the terminal. By default it uses:
 
 ```text
-https://your.server.ip.or.domain:8443/bootstrap-admin
+username: admin
+email: admin@local
+password: <generated during install>
 ```
 
-That bootstrap page is only available until the first admin account is created. After that, it is locked for the lifetime of that installation and visitors are sent to the normal login page instead. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
+Use the printed password from the installer output or from `/opt/creative-planner/.env.selfhost`. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
 
 ### 5. Manage the running app
 

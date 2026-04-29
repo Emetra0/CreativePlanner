@@ -74,6 +74,10 @@ wait_for_url() {
   return 1
 }
 
+random_secret() {
+  openssl rand -base64 24 | tr -d '=+/\n' | cut -c1-24
+}
+
 run_privileged() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -113,6 +117,9 @@ ensure_compose_plugin
 
 APP_PORT="$(grep '^APP_PORT=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
 PUBLIC_HOST="$(grep '^PUBLIC_HOST=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
+DEFAULT_ADMIN_USERNAME="$(grep '^SELFHOST_DEFAULT_ADMIN_USERNAME=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
+DEFAULT_ADMIN_EMAIL="$(grep '^SELFHOST_DEFAULT_ADMIN_EMAIL=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
+DEFAULT_ADMIN_PASSWORD="$(grep '^SELFHOST_DEFAULT_ADMIN_PASSWORD=' .env.selfhost | tail -n 1 | cut -d= -f2-)"
 
 if [ -z "${APP_PORT}" ]; then
   APP_PORT="8443"
@@ -121,6 +128,21 @@ fi
 if [ -z "${PUBLIC_HOST}" ]; then
   echo "Self-host update failed: PUBLIC_HOST is missing from .env.selfhost" >&2
   exit 1
+fi
+
+if [ -z "${DEFAULT_ADMIN_USERNAME}" ]; then
+  DEFAULT_ADMIN_USERNAME="admin"
+  set_env_value "SELFHOST_DEFAULT_ADMIN_USERNAME" "${DEFAULT_ADMIN_USERNAME}"
+fi
+
+if [ -z "${DEFAULT_ADMIN_EMAIL}" ]; then
+  DEFAULT_ADMIN_EMAIL="admin@local"
+  set_env_value "SELFHOST_DEFAULT_ADMIN_EMAIL" "${DEFAULT_ADMIN_EMAIL}"
+fi
+
+if [ -z "${DEFAULT_ADMIN_PASSWORD}" ]; then
+  DEFAULT_ADMIN_PASSWORD="$(random_secret)"
+  set_env_value "SELFHOST_DEFAULT_ADMIN_PASSWORD" "${DEFAULT_ADMIN_PASSWORD}"
 fi
 
 TLS_CERT_DIR_RELATIVE="./.selfhost/certs"
@@ -142,3 +164,17 @@ if ! wait_for_url "https://${PUBLIC_HOST}:${APP_PORT}" 45; then
   ${COMPOSE_BIN} -f docker-compose.selfhost.yml --env-file .env.selfhost logs --tail=80 frontend backend >&2 || true
   exit 1
 fi
+
+cat <<EOF
+
+Self-host update completed.
+
+Login URL:
+  https://${PUBLIC_HOST}:${APP_PORT}
+
+Default local admin account:
+  Login username: ${DEFAULT_ADMIN_USERNAME}
+  Login email: ${DEFAULT_ADMIN_EMAIL}
+  Login password: ${DEFAULT_ADMIN_PASSWORD}
+
+EOF

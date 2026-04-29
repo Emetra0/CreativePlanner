@@ -68,8 +68,8 @@ The frontend proxies both `/api` and the Collabora `/browser`, `/cool`, and `/ho
 - MariaDB state is persisted in the Docker volume `mariadb_data`.
 - The backend automatically creates the database and applies `schema.sql` plus all `migration_*.sql` files on first boot.
 - User cloud files are stored under `SELFHOST_DATA_DIR` in the `backend_user_storage` Docker volume.
-- The first admin must be created through the public `/bootstrap-admin` page on a fresh install.
-- That bootstrap page automatically locks as soon as the first admin exists, and it does not reopen unless you reinstall with a fresh database.
+- The installer also creates a default local admin account automatically on a fresh database.
+- The default login identity is `admin` / `admin@local`, and the installer generates the password and prints it in the terminal.
 - The installer-generated certificate is self-signed, so browsers will warn until you replace it with a trusted certificate.
 
 ## What You See At The End
@@ -79,7 +79,7 @@ When installation finishes, the terminal prints:
 - the Ubuntu server host it detected
 - the final app port it chose
 - the exact Login URL
-- the exact First admin setup URL
+- the default local admin username, email, and password
 - the path to `.env.selfhost`
 - quick `docker compose` commands for status and logs
 
