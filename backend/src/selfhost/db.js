@@ -154,7 +154,16 @@ async function executeSqlFile(connection, sqlPath) {
   const content = await fs.readFile(sqlPath, 'utf8');
   const statements = splitSqlStatements(content);
   for (const statement of statements) {
-    await connection.query(translateSql(statement));
+    try {
+      await connection.query(translateSql(statement));
+    } catch (error) {
+      const message = String(error?.message || '');
+      const code = String(error?.code || '');
+      const isDuplicateColumn = code === 'ER_DUP_FIELDNAME' || /Duplicate column name/i.test(message);
+      const isDuplicateIndex = code === 'ER_DUP_KEYNAME' || /Duplicate key name/i.test(message);
+      if (isDuplicateColumn || isDuplicateIndex) continue;
+      throw error;
+    }
   }
 }
 

@@ -39,6 +39,18 @@ export default function LoginPage() {
   const [resetRequestSent, setResetRequestSent] = useState(false);
   const [resetError, setResetError] = useState('');
 
+    const readResponseBody = async (response: Response) => {
+        const raw = await response.text();
+        if (!raw) return {};
+
+        try {
+            return JSON.parse(raw);
+        } catch {
+            const snippet = raw.replace(/\s+/g, ' ').trim().slice(0, 180);
+            return { error: snippet || 'Unexpected server response' };
+        }
+    };
+
   useEffect(() => {
       if (isAuthenticated) {
           navigate('/');
@@ -73,7 +85,7 @@ export default function LoginPage() {
             body: JSON.stringify(body)
         });
 
-        const data = await response.json();
+        const data = await readResponseBody(response);
 
         if (!response.ok) {
             throw new Error(data.message || data.error || 'Authentication failed');
