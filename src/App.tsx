@@ -9,6 +9,7 @@ import AppLanguageManager from '@/components/AppLanguageManager';
 
 const HomePage = lazy(() => import('@/app/page'));
 const LoginPage = lazy(() => import('@/app/login/page'));
+const BootstrapAdminPage = lazy(() => import('@/app/bootstrap-admin/page'));
 const BrainstormingPage = lazy(() => import('@/app/brainstorming/page'));
 const CalendarPage = lazy(() => import('@/app/calendar/page'));
 const FilesPage = lazy(() => import('@/app/files/page'));
@@ -54,6 +55,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/bootstrap-admin" element={<BootstrapAdminPage />} />
                 <Route path="/brainstorming" element={<BrainstormingPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/files" element={<FilesPage />} />

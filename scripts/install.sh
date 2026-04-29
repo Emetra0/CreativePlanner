@@ -260,10 +260,10 @@ HTTPS app port:
   ${APP_PORT}
 
 Login flow:
-  1. Open the Login URL shown at the end of this installer output.
-  2. If this is the first setup, open the First admin setup URL shown at the end.
-  3. Create the first admin account
-  4. Return to the Login URL and sign in with that account
+  1. On the first install, open the First admin setup URL shown at the end.
+  2. Create the first admin account on that bootstrap page.
+  3. After that page locks, return to the Login URL and sign in.
+  4. Future visitors are sent to the normal login page instead of bootstrap setup.
 
 Collabora admin password:
   ${COLLABORA_PASSWORD_VALUE}
@@ -285,7 +285,7 @@ Manage the stack:
 
 Next steps:
   1. Use local accounts by default for this self-hosted install.
-  2. If this is the first install, create the first admin through /bootstrap-admin.
+  2. If this is the first install, create the first admin through the bootstrap page before anyone logs in.
   3. Your browser will show a certificate warning at first because the installer creates a self-signed HTTPS certificate.
   4. Keep ${INSTALL_DIR}/.env.selfhost if you need to restart or update the stack later.
   5. Install source: ${INSTALL_SOURCE_DESCRIPTION}

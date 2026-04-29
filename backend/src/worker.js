@@ -1042,12 +1042,21 @@ export default {
       }
 
     try {
-      // ---------------------------------------------------------------
-      // BOOTSTRAP ADMIN  (one-time, no auth required)
-      // Creates the very first admin account when no admins exist yet.
-      // Self-disabling: returns 403 once any admin account is present.
-      // This account should be deleted once real admins are promoted.
-      // ---------------------------------------------------------------
+        // ---------------------------------------------------------------
+        // BOOTSTRAP ADMIN  (one-time, no auth required)
+        // Creates the very first admin account when no admins exist yet.
+        // Self-disabling: returns 403 once any admin account is present.
+        // ---------------------------------------------------------------
+        if (url.pathname === '/bootstrap-admin/status' && request.method === 'GET') {
+          const existingAdmin = await env.DB.prepare(
+            "SELECT id FROM users WHERE role = 'admin' LIMIT 1"
+          ).first();
+          return new Response(
+            JSON.stringify({ enabled: !existingAdmin, locked: !!existingAdmin }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
       if (url.pathname === '/bootstrap-admin' && request.method === 'POST') {
           // 1. Hard-refuse if ANY admin already exists
           const existingAdmin = await env.DB.prepare(
@@ -1095,7 +1104,7 @@ export default {
           return new Response(
               JSON.stringify({
                   success: true,
-                  message: 'Bootstrap admin created. Log in and promote real admins, then delete this account.',
+                message: 'Bootstrap admin created. Bootstrap setup is now locked for this installation.',
                   email: 'admin@local',
                   username: username.trim()
               }),

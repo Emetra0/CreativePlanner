@@ -127,7 +127,7 @@ If this is the first install, create the first admin account through:
 https://your.server.ip.or.domain:8443/bootstrap-admin
 ```
 
-After creating that first admin, go back to the main app URL and log in with the account you just created. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
+That bootstrap page is only available until the first admin account is created. After that, it is locked for the lifetime of that installation and visitors are sent to the normal login page instead. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
 
 ### 5. Manage the running app
 

@@ -68,7 +68,8 @@ The frontend proxies both `/api` and the Collabora `/browser`, `/cool`, and `/ho
 - MariaDB state is persisted in the Docker volume `mariadb_data`.
 - The backend automatically creates the database and applies `schema.sql` plus all `migration_*.sql` files on first boot.
 - User cloud files are stored under `SELFHOST_DATA_DIR` in the `backend_user_storage` Docker volume.
-- The first admin can still be created through the existing `/bootstrap-admin` flow.
+- The first admin must be created through the public `/bootstrap-admin` page on a fresh install.
+- That bootstrap page automatically locks as soon as the first admin exists, and it does not reopen unless you reinstall with a fresh database.
 - The installer-generated certificate is self-signed, so browsers will warn until you replace it with a trusted certificate.
 
 ## What You See At The End
