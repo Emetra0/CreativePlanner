@@ -55,6 +55,10 @@ export function translateSql(sql) {
   if (!translated) return translated;
 
   translated = translated.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT IGNORE INTO');
+  translated = translated.replace(
+    /printf\('%04d',\s*abs\(random\(\)\s*%\s*10000\)\)/gi,
+    "LPAD(FLOOR(RAND() * 10000), 4, '0')",
+  );
   translated = translateUpsert(translated);
   translated = translateCreateTable(translated);
   translated = translated.replace(/\bBOOLEAN\b/gi, 'TINYINT(1)');
