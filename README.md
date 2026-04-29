@@ -118,6 +118,13 @@ After the installer finishes, use the URL shown in the terminal summary. It incl
 - The default local admin username, email, and password
 - The `.env.selfhost` file path
 
+The installer prints the login address explicitly in this format:
+
+```text
+Login URL:
+    https://your.server.ip.or.domain:8443
+```
+
 If the installer kept the requested default port, the URL will be:
 
 ```text

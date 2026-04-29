@@ -306,6 +306,9 @@ Detected server host:
 HTTPS app port:
   ${APP_PORT}
 
+Login URL:
+  ${LOGIN_URL}
+
 Login flow:
   1. Open the Login URL shown at the end of this installer output.
   2. Sign in with the default local admin credentials printed below.
@@ -353,24 +356,3 @@ Note:
 
 EOF
 fi
-
-cat <<EOF
-
-================ EASY LOGIN INFO ================
-Detected server host:
-  ${PUBLIC_HOST}
-
-Login URL:
-  ${LOGIN_URL}
-
-First admin setup URL:
-  ${FIRST_ADMIN_URL}
-
-If this is the first time:
-  1. Open ${FIRST_ADMIN_URL}
-  2. Create the first admin account
-  3. Go to ${LOGIN_URL}
-  4. Log in with that account
-=================================================
-
-EOF
