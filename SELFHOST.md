@@ -71,6 +71,7 @@ The frontend proxies both `/api` and the Collabora `/browser`, `/cool`, and `/ho
 - User cloud files are stored under `SELFHOST_DATA_DIR` in the `backend_user_storage` Docker volume.
 - The installer also creates a default local admin account automatically on a fresh database.
 - The default login identity is `admin` / `admin@local`, and the installer generates the password and prints it in the terminal.
+- There is no separate bootstrap page in the normal self-host flow; first login uses the standard login screen with those printed credentials.
 - The installer-generated certificate is self-signed, so browsers will warn until you replace it with a trusted certificate.
 
 ## What You See At The End

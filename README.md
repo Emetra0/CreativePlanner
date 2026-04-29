@@ -134,6 +134,8 @@ password: <generated during install>
 
 Use the printed password from the installer output or from `/opt/creative-planner/.env.selfhost`. Because the installer creates a self-signed certificate automatically, the browser will show a trust warning until you replace it with your own certificate.
 
+There is no separate bootstrap page in the normal self-host flow. Users sign in through the standard login page with the local admin account printed by the installer.
+
 ### 5. Manage the running app
 
 The install directory defaults to `/opt/creative-planner`.

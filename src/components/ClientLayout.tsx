@@ -8,9 +8,8 @@ import Header from "@/components/Header";
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
-  const [bootstrapStatus, setBootstrapStatus] = useState<'unknown' | 'enabled' | 'locked'>('unknown');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const previousSidebarCollapsedRef = useRef(false);
@@ -22,32 +21,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (!isHydrated || isAuthenticated) {
-      setBootstrapStatus('locked');
-      return;
-    }
-
-    let cancelled = false;
-    const baseUrl = getWorkerUrl();
-
-    const loadBootstrapStatus = async () => {
-      try {
-        const response = await fetch(`${baseUrl}/bootstrap-admin/status?t=${Date.now()}`);
-        if (!response.ok) throw new Error('Failed to check bootstrap status');
-        const data = await response.json();
-        if (!cancelled) setBootstrapStatus(data.enabled ? 'enabled' : 'locked');
-      } catch {
-        if (!cancelled) setBootstrapStatus('locked');
-      }
-    };
-
-    loadBootstrapStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [isHydrated, isAuthenticated]);
 
   useEffect(() => {
     const disablePageZoom = pathname === '/mindmap/editor' || pathname === '/mindmap/moodboard' || pathname === '/office/editor';
@@ -156,29 +129,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const isBootstrapRoute = pathname === '/bootstrap-admin';
-    const isPublicRoute = pathname === '/login' || pathname.startsWith('/auth/') || isBootstrapRoute;
+    const isPublicRoute = pathname === '/login' || pathname.startsWith('/auth/');
 
     if (!isHydrated) return;
-
-    if (!isAuthenticated && bootstrapStatus === 'enabled' && !isBootstrapRoute) {
-      navigate('/bootstrap-admin', { replace: true });
-      return;
-    }
-
-    if (!isAuthenticated && bootstrapStatus === 'locked' && isBootstrapRoute) {
-      navigate('/login', { replace: true });
-      return;
-    }
-
-    if (isAuthenticated && isBootstrapRoute) {
-      navigate('/', { replace: true });
-      return;
-    }
-    
-    if (!isAuthenticated && bootstrapStatus === 'unknown') {
-      return;
-    }
 
     if (!isAuthenticated && !isPublicRoute) {
       navigate('/login');
@@ -190,19 +143,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         navigate('/chat');
       }
     }
-  }, [bootstrapStatus, isHydrated, isAuthenticated, pathname, navigate]);
+  }, [isHydrated, isAuthenticated, pathname, navigate]);
 
   if (!isHydrated) {
     return null; 
   }
 
-  // If on login/auth/bootstrap pages, render just the children
-  if (pathname === '/login' || pathname === '/bootstrap-admin' || pathname?.startsWith('/auth/')) {
+  // If on login/auth pages, render just the children
+  if (pathname === '/login' || pathname?.startsWith('/auth/')) {
     return <main className="h-screen w-screen bg-background">{children}</main>;
   }
 
   // If not authenticated (and not on public page), we are redirecting, so render nothing
-  if (!isAuthenticated || bootstrapStatus === 'unknown') {
+  if (!isAuthenticated) {
     return null;
   }
 

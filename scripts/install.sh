@@ -229,7 +229,6 @@ if [[ "${APP_PORT}" != "${REQUESTED_APP_PORT}" ]]; then
   AUTO_SELECTED_PORT="true"
 fi
 LOGIN_URL="https://${PUBLIC_HOST}:${APP_PORT}"
-FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
 
 mkdir -p "$(dirname "${INSTALL_DIR}")"
 
@@ -311,7 +310,7 @@ Login flow:
   1. Open the Login URL shown at the end of this installer output.
   2. Sign in with the default local admin credentials printed below.
   3. Change or replace that admin account after you finish first-time setup.
-  4. The bootstrap page remains locked because the installer already created the first admin.
+  4. Future users should use the same normal login page.
 
 Default local admin account:
   Login username: ${SELFHOST_DEFAULT_ADMIN_USERNAME}
