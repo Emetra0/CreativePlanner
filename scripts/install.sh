@@ -103,8 +103,10 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y ca-certificates curl git openssl docker.io
 if ! apt-get install -y docker-compose-plugin; then
-  apt-get install -y docker-compose
+  echo "Failed to install docker-compose-plugin. The self-host installer requires the modern 'docker compose' plugin." >&2
+  exit 1
 fi
+apt-get remove -y docker-compose >/dev/null 2>&1 || true
 systemctl enable --now docker
 
 REQUESTED_APP_PORT="${APP_PORT}"
@@ -118,7 +120,8 @@ FIRST_ADMIN_URL="${LOGIN_URL}/bootstrap-admin"
 
 COMPOSE_BIN="docker compose"
 if ! docker compose version >/dev/null 2>&1; then
-  COMPOSE_BIN="docker-compose"
+  echo "Docker Compose plugin is not available. Install it with: sudo apt-get install -y docker-compose-plugin" >&2
+  exit 1
 fi
 
 mkdir -p "$(dirname "${INSTALL_DIR}")"

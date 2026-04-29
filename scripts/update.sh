@@ -19,7 +19,9 @@ BRANCH="${SELFHOST_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo
 
 COMPOSE_BIN="docker compose"
 if ! docker compose version >/dev/null 2>&1; then
-  COMPOSE_BIN="docker-compose"
+  echo "Self-host update requires the Docker Compose plugin ('docker compose')." >&2
+  echo "Run: sudo apt-get update && sudo apt-get install -y docker-compose-plugin" >&2
+  exit 1
 fi
 
 git fetch origin "${BRANCH}"
