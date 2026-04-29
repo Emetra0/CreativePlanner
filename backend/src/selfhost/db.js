@@ -183,22 +183,7 @@ export async function createMariaDbPool(env = process.env) {
   let lastError = null;
   for (let attempt = 1; attempt <= 30; attempt += 1) {
     try {
-      if (adminPassword || user === 'root') {
-        const adminPool = mysql.createPool({
-          host,
-          port,
-          user: adminPassword ? adminUser : user,
-          password: adminPassword || password,
-          waitForConnections: true,
-          connectionLimit: 10,
-          charset: 'utf8mb4',
-          multipleStatements: false,
-        });
-        await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-        await adminPool.end();
-      }
-
-      return mysql.createPool({
+      const appPool = mysql.createPool({
         host,
         port,
         user,
@@ -210,7 +195,36 @@ export async function createMariaDbPool(env = process.env) {
         namedPlaceholders: false,
         multipleStatements: false,
       });
+      const connection = await appPool.getConnection();
+      connection.release();
+      return appPool;
     } catch (error) {
+      const message = String(error?.message || '');
+      const code = String(error?.code || '');
+      const missingDatabase = code === 'ER_BAD_DB_ERROR' || /Unknown database/i.test(message);
+
+      if (missingDatabase && (adminPassword || user === 'root')) {
+        try {
+          const adminPool = mysql.createPool({
+            host,
+            port,
+            user: adminPassword ? adminUser : user,
+            password: adminPassword || password,
+            waitForConnections: true,
+            connectionLimit: 10,
+            charset: 'utf8mb4',
+            multipleStatements: false,
+          });
+          await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+          await adminPool.end();
+          continue;
+        } catch (adminError) {
+          lastError = adminError;
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+      }
+
       lastError = error;
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
